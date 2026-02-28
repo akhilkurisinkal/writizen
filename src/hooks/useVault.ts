@@ -125,6 +125,19 @@ export function useVault(vaultPath: string | null) {
         }
     }, [POSTS_DIR]);
 
+    const deletePost = useCallback(async (path: string): Promise<boolean> => {
+        try {
+            setVaultError(null);
+            const { remove } = await import('@tauri-apps/plugin-fs');
+            await remove(path, { baseDir: BaseDirectory.Home });
+            return true;
+        } catch (error) {
+            console.error("Failed to delete post", error);
+            setVaultError("Delete Error: " + String(error));
+            return false;
+        }
+    }, []);
+
     const saveAsset = useCallback(async (sourceFile: string | File): Promise<string | null> => {
         if (!ASSETS_DIR) return null;
         try {
@@ -252,6 +265,7 @@ export function useVault(vaultPath: string | null) {
         readPost,
         savePost,
         createPost,
+        deletePost,
         saveAsset,
         renamePost
     };

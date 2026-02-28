@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { FileText, FolderClosed, FolderOpen, Plus, Sun, Moon, Send, Loader2, ChevronRight, FolderPlus, LogOut, Settings } from "lucide-react";
+import { FileText, FolderClosed, FolderOpen, Plus, Sun, Moon, Send, Loader2, ChevronRight, FolderPlus, LogOut, Settings, Trash2 } from "lucide-react";
 import clsx from "clsx";
 import { open } from "@tauri-apps/plugin-dialog";
 import { homeDir } from "@tauri-apps/api/path";
@@ -34,6 +34,7 @@ function TreeNode({
   onSelectPost: (post: Post) => void;
   expandedPaths: Set<string>;
   onToggleExpand: (path: string) => void;
+  onDeletePost: (post: Post) => void;
 }) {
   if (node.isDir) {
     const isExpanded = expandedPaths.has(node.path);
@@ -73,6 +74,7 @@ function TreeNode({
                 onSelectPost={onSelectPost}
                 expandedPaths={expandedPaths}
                 onToggleExpand={onToggleExpand}
+                onDeletePost={onDeletePost}
               />
             ))}
           </div>
@@ -96,7 +98,7 @@ function TreeNode({
         }
       }}
       className={clsx(
-        "w-full flex items-center gap-1.5 py-1 text-sm rounded-md transition-colors truncate",
+        "group w-full flex items-center justify-between py-1 text-sm rounded-md transition-colors",
         isActive
           ? "bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 font-medium"
           : isMd
@@ -106,8 +108,25 @@ function TreeNode({
       style={{ paddingLeft: `${depth * 14 + 6 + 14} px`, paddingRight: '6px' }}
       disabled={!isMd}
     >
-      <FileText size={13} className={clsx("shrink-0", isActive ? "text-indigo-500" : "text-slate-400")} />
-      <span className="truncate">{node.name}</span>
+      <div className="flex items-center gap-1.5 min-w-0 pr-1 truncate">
+        <FileText size={13} className={clsx("shrink-0", isActive ? "text-indigo-500" : "text-slate-400")} />
+        <span className="truncate">{node.name}</span>
+      </div>
+      {isMd && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onDeletePost({
+              name: node.name.replace('.md', ''),
+              path: node.path,
+            });
+          }}
+          className="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-red-500 transition-all rounded ml-auto flex-shrink-0"
+          title="Delete Post"
+        >
+          <Trash2 size={13} />
+        </button>
+      )}
     </button>
   );
 }
@@ -216,7 +235,7 @@ function App() {
   const [isPublishing, setIsPublishing] = useState(false);
   const [expandedPaths, setExpandedPaths] = useState<Set<string>>(new Set());
 
-  const { isInitializing, vaultError, setVaultError, initVault, getVaultTree, readPost, savePost, createPost } = useVault(vaultPath);
+  const { isInitializing, vaultError, setVaultError, initVault, getVaultTree, readPost, savePost, createPost, deletePost } = useVault(vaultPath);
   useEffect(() => {
     if (vaultPath) {
       initVault();
@@ -286,6 +305,24 @@ function App() {
     if (newPost) {
       await refreshTree();
       handleSelectPost(newPost);
+    }
+  };
+
+  const handleDeletePost = async (post: Post) => {
+    const { ask } = await import('@tauri-apps/plugin-dialog');
+    const confirmed = await ask(`Are you sure you want to delete "${post.name}"?\nThis action cannot be undone.`, {
+      title: 'Delete Post',
+      kind: 'warning',
+    });
+    if (confirmed) {
+      const success = await deletePost(post.path);
+      if (success) {
+        if (activePost?.path === post.path) {
+          setActivePost(null);
+          setEditorContent("");
+        }
+        await refreshTree();
+      }
     }
   };
 
@@ -431,6 +468,7 @@ function App() {
               onSelectPost={handleSelectPost}
               expandedPaths={expandedPaths}
               onToggleExpand={toggleExpand}
+              onDeletePost={handleDeletePost}
             />
           ) : null}
         </div>
