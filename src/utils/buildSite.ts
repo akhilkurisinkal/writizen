@@ -1,4 +1,4 @@
-import { readDir, readTextFile, writeTextFile, mkdir, exists, copyFile, remove } from '@tauri-apps/plugin-fs';
+import { readDir, readTextFile, writeTextFile, mkdir, exists, copyFile } from '@tauri-apps/plugin-fs';
 import { join } from '@tauri-apps/api/path';
 import { marked } from 'marked';
 import { generateBlogHTML, generateIndexHTML } from './template';
@@ -120,7 +120,8 @@ jobs:
       await writeTextFile(cnamePath, customDomain.trim());
     } else {
       if (await exists(cnamePath)) {
-        await remove(cnamePath);
+        // Clearing the CNAME file contents achieves the same effect on GitHub Pages without requiring fs:remove blanket permissions
+        await writeTextFile(cnamePath, "");
       }
     }
 
