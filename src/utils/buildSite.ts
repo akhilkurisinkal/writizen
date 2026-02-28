@@ -1,4 +1,4 @@
-import { readDir, readTextFile, writeTextFile, mkdir, exists, copyFile } from '@tauri-apps/plugin-fs';
+import { readDir, readTextFile, writeTextFile, mkdir, exists, copyFile, remove } from '@tauri-apps/plugin-fs';
 import { join } from '@tauri-apps/api/path';
 import { marked } from 'marked';
 import { generateBlogHTML, generateIndexHTML } from './template';
@@ -115,9 +115,13 @@ jobs:
     await writeTextFile(deployYmlPath, deployYml.trim());
 
     // 4.6 Handle Custom Domain CNAME Generation
+    const cnamePath = await join(outDir, 'CNAME');
     if (customDomain && customDomain.trim() !== '') {
-      const cnamePath = await join(outDir, 'CNAME');
       await writeTextFile(cnamePath, customDomain.trim());
+    } else {
+      if (await exists(cnamePath)) {
+        await remove(cnamePath);
+      }
     }
 
     // 5. Copy Assets (Images) if they exist
