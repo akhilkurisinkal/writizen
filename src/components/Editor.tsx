@@ -101,7 +101,7 @@ const tiptapSerializer = new MarkdownSerializer(
 interface EditorProps {
     content: string;
     postPath: string;
-    onChange: (markdown: string) => void;
+    onChange: (markdown: string, path: string) => void;
 }
 
 // ─── TOOLBAR ──────────────────────────────────────────────────────────────────
@@ -306,13 +306,15 @@ function MetadataHeader({
 }
 
 // ─── MAIN EDITOR ──────────────────────────────────────────────────────────────
-export const EditorWrapper = ({ content, postPath: _postPath, onChange }: EditorProps) => {
+export const EditorWrapper = ({ content, postPath, onChange }: EditorProps) => {
     const { saveAsset } = useVault(null); // The editor doesn't strictly need vault path for saveAsset as ASSETS_DIR is resolved internally if needed, but it should be null here or imported properly, wait, previously it was const { saveAsset } = useVault(null) but useVault takes vaultPath: string | null.
     // Actually previously it was `import { useVault } from "../hooks/useVault";` and `const { saveAsset } = useVault();` - wait, useVault expects `vaultPath: string | null` but TS allowed it if no args? No, useVault has `export function useVault(vaultPath: string | null)`
     // To be safe I will use `useVault(null)`.
 
     const onChangeRef = useRef(onChange);
+    const postPathRef = useRef(postPath);
     onChangeRef.current = onChange;
+    postPathRef.current = postPath;
 
     const parsed = useRef(parseFrontmatter(content || ""));
     const [meta, setMeta] = React.useState<PostMeta>(parsed.current.meta);
@@ -327,7 +329,7 @@ export const EditorWrapper = ({ content, postPath: _postPath, onChange }: Editor
         if (debounceTimeout.current) clearTimeout(debounceTimeout.current);
 
         debounceTimeout.current = setTimeout(() => {
-            onChangeRef.current(fullMarkdown);
+            onChangeRef.current(fullMarkdown, postPathRef.current);
             latestContentRef.current = null;
         }, 800);
     };
@@ -336,7 +338,7 @@ export const EditorWrapper = ({ content, postPath: _postPath, onChange }: Editor
         return () => {
             if (debounceTimeout.current && latestContentRef.current) {
                 clearTimeout(debounceTimeout.current);
-                onChangeRef.current(latestContentRef.current);
+                onChangeRef.current(latestContentRef.current, postPathRef.current);
             }
         };
     }, []);

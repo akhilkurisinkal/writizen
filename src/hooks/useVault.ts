@@ -101,22 +101,12 @@ export function useVault(vaultPath: string | null) {
         if (!POSTS_DIR) return null;
         try {
             setVaultError(null);
-            const { exists } = await import('@tauri-apps/plugin-fs');
 
-            // Loop to find the next available "Untitled" or "Untitled X" name
-            let baseName = "Untitled";
-            let filename = "Untitled.md";
-            let title = "Untitled";
-            let slug = "untitled";
-
-            let counter = 1;
-            while (await exists(await join(POSTS_DIR, filename), { baseDir: BaseDirectory.Home })) {
-                baseName = `Untitled ${counter}`;
-                filename = `${baseName}.md`;
-                title = baseName;
-                slug = `untitled-${counter}`;
-                counter++;
-            }
+            const id = Date.now().toString();
+            const baseName = `Untitled-${id}`;
+            const filename = `${baseName}.md`;
+            const title = "Untitled";
+            const slug = `untitled-${id}`;
 
             const path = await join(POSTS_DIR, filename);
             const today = new Date().toISOString().split("T")[0];

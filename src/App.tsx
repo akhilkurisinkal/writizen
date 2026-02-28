@@ -210,7 +210,6 @@ function App() {
   const [activePost, setActivePost] = useState<Post | null>(null);
   const [editorContent, setEditorContent] = useState<string>("");
   const [isLoadingFile, setIsLoadingFile] = useState(false);
-  const [sessionKey, setSessionKey] = useState("");
   const [isPublishSettingsOpen, setIsPublishSettingsOpen] = useState(false);
   const [isPublishConfirmOpen, setIsPublishConfirmOpen] = useState(false);
   const [publishSuccess, setPublishSuccess] = useState(false);
@@ -245,22 +244,21 @@ function App() {
     }
   }, [isInitializing, vaultPath, getVaultTree]);
 
-  // Read content when active post changes
-  useEffect(() => {
-    if (activePost) {
-      setSessionKey(activePost.path + "-" + Date.now());
-      setIsLoadingFile(true);
-      const loadContent = async () => {
-        const content = await readPost(activePost.path);
-        setEditorContent(content);
-        setIsLoadingFile(false);
-      };
-      loadContent();
-    } else {
-      setEditorContent("");
+  const handleSelectPost = async (post: Post) => {
+    if (activePost?.path === post.path) return;
+    setIsLoadingFile(true);
+    try {
+      const content = await readPost(post.path);
+      // React batches these updates together so Editor remounts perfectly synchronized
+      setActivePost(post);
+      setEditorContent(content);
+    } catch (e) {
+      console.error(e);
+      setVaultError("Failed to read file: " + String(e));
+    } finally {
       setIsLoadingFile(false);
     }
-  }, [activePost, readPost]);
+  };
 
   // Dark mode
   useEffect(() => {
@@ -287,7 +285,7 @@ function App() {
     const newPost = await createPost();
     if (newPost) {
       await refreshTree();
-      setActivePost(newPost);
+      handleSelectPost(newPost);
     }
   };
 
@@ -430,7 +428,7 @@ function App() {
               node={vaultTree}
               depth={0}
               activePost={activePost}
-              onSelectPost={setActivePost}
+              onSelectPost={handleSelectPost}
               expandedPaths={expandedPaths}
               onToggleExpand={toggleExpand}
             />
@@ -501,11 +499,11 @@ function App() {
                 </div>
               ) : (
                 <Editor
-                  key={sessionKey}
+                  key={activePost.path}
                   content={editorContent}
                   postPath={activePost.path}
-                  onChange={(markdown) => {
-                    savePost(activePost.path, markdown);
+                  onChange={(markdown, path) => {
+                    savePost(path, markdown);
                   }}
                 />
               )}
