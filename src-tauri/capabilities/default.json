@@ -85,6 +85,15 @@
           "path": "$HOME/My_Blog_Vault/**"
         }
       ]
+    },
+    "window:default",
+    {
+      "identifier": "fs:allow-copy-file",
+      "allow": [
+        {
+          "path": "**"
+        }
+      ]
     }
   ]
 }

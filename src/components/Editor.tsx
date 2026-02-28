@@ -15,6 +15,9 @@ interface EditorProps {
     onChange: (markdown: string) => void;
 }
 
+// Import useVault to access the physical file saving logic
+import { useVault } from "../hooks/useVault";
+
 const MenuBar = ({ editor }: { editor: any }) => {
     if (!editor) {
         return null;
@@ -111,6 +114,45 @@ export const EditorWrapper = ({ content, onChange }: EditorProps) => {
             onChange(markdownOutput);
         },
     });
+
+    const { saveAsset } = useVault();
+
+    // Handle Tauri Native OS Drag and Drop
+    useEffect(() => {
+        let unlisten: (() => void) | undefined;
+
+        const setupDragDrop = async () => {
+            const { getCurrentWindow } = await import('@tauri-apps/api/window');
+
+            // Listen for native OS drops anywhere on the window in Tauri v2
+            unlisten = await getCurrentWindow().onDragDropEvent(async (event: any) => {
+                if (event.payload.type === 'drop' && event.payload.paths && event.payload.paths.length > 0 && editor) {
+                    // Grab the first dropped file's absolute OS path
+                    const sourcePath = event.payload.paths[0];
+
+                    // Verify it's an image
+                    if (!sourcePath.match(/\.(png|jpe?g|gif|webp|svg)$/i)) {
+                        console.warn("Dropped file is not a supported image format:", sourcePath);
+                        return;
+                    }
+
+                    // Physically copy the file from the Desktop/OS into the local My_Blog_Vault/assets
+                    const newRelativePath = await saveAsset(sourcePath);
+
+                    if (newRelativePath) {
+                        // Insert the image into the Tiptap canvas which will serialize to markdown ![alt](../assets/img.png)
+                        editor.chain().focus().setImage({ src: newRelativePath }).run();
+                    }
+                }
+            });
+        };
+
+        setupDragDrop();
+
+        return () => {
+            if (unlisten) unlisten();
+        };
+    }, [editor, saveAsset]);
 
     // Cleanup when component unmounts
     useEffect(() => {
