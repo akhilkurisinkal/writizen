@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Image from "@tiptap/extension-image";
@@ -40,6 +40,9 @@ interface EditorProps {
 import { useVault } from "../hooks/useVault";
 
 const MenuBar = ({ editor, saveAsset }: { editor: any, saveAsset: (source: string | File) => Promise<string | null> }) => {
+    const [linkPromptVisible, setLinkPromptVisible] = useState(false);
+    const [linkUrl, setLinkUrl] = useState("");
+
     if (!editor) {
         return null;
     }
@@ -49,17 +52,19 @@ const MenuBar = ({ editor, saveAsset }: { editor: any, saveAsset: (source: strin
         editor.view.focus();
     };
 
-    const setLink = () => {
+    const triggerLinkPrompt = () => {
         const previousUrl = editor.getAttributes('link').href;
-        const url = window.prompt('URL', previousUrl);
+        setLinkUrl(previousUrl || "");
+        setLinkPromptVisible(true);
+    };
 
-        if (url === null) return; // cancelled
-        if (url === '') {
+    const confirmLink = () => {
+        if (linkUrl === '') {
             editor.chain().focus().extendMarkRange('link').unsetLink().run();
-            return;
+        } else {
+            editor.chain().focus().extendMarkRange('link').setLink({ href: linkUrl }).run();
         }
-
-        editor.chain().focus().extendMarkRange('link').setLink({ href: url }).run();
+        setLinkPromptVisible(false);
     };
 
     const addImage = async () => {
@@ -145,11 +150,38 @@ const MenuBar = ({ editor, saveAsset }: { editor: any, saveAsset: (source: strin
             </button>
             <div className="w-px h-4 bg-slate-300 dark:bg-slate-600 mx-1" />
             <button
-                onClick={setLink}
-                className={`p-1.5 rounded hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors ${editor.isActive('link') ? 'bg-slate-200 dark:bg-slate-700 text-indigo-600 dark:text-indigo-400' : 'text-slate-600 dark:text-slate-400'}`}
+                onClick={triggerLinkPrompt}
+                className={`p-1.5 rounded hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors relative ${editor.isActive('link') ? 'bg-slate-200 dark:bg-slate-700 text-indigo-600 dark:text-indigo-400' : 'text-slate-600 dark:text-slate-400'}`}
                 title="Insert Link"
             >
                 <LinkIcon size={16} />
+
+                {/* Custom Link Popover to replace broken window.prompt */}
+                {linkPromptVisible && (
+                    <div
+                        className="absolute top-full left-0 mt-2 p-2 bg-white dark:bg-slate-800 rounded shadow-lg border border-slate-200 dark:border-slate-700 flex gap-2 z-50 w-64"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        <input
+                            type="url"
+                            placeholder="https://..."
+                            value={linkUrl}
+                            onChange={(e) => setLinkUrl(e.target.value)}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter') confirmLink();
+                                if (e.key === 'Escape') setLinkPromptVisible(false);
+                            }}
+                            className="flex-1 px-2 py-1 text-sm bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded outline-none focus:ring-1 focus:ring-indigo-500 text-slate-900 dark:text-slate-100"
+                            autoFocus
+                        />
+                        <button
+                            onClick={(e) => { e.stopPropagation(); confirmLink(); }}
+                            className="px-2 py-1 text-sm bg-indigo-600 text-white rounded hover:bg-indigo-700 transition-colors"
+                        >
+                            Save
+                        </button>
+                    </div>
+                )}
             </button>
             <button
                 onClick={addImage}
