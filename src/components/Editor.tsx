@@ -1,8 +1,8 @@
 // @ts-ignore
 import { Crepe } from "@milkdown/crepe";
-import "@milkdown/crepe/theme/common/style.css";
+import "@milkdown/crepe/lib/theme/common/style.css";
 // We use the frame theme which closely matches our UI
-import "@milkdown/crepe/theme/frame/style.css";
+import "@milkdown/crepe/lib/theme/frame/style.css";
 import { useEffect, useRef } from "react";
 
 interface EditorProps {
