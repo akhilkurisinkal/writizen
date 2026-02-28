@@ -151,8 +151,12 @@ const MenuBar = ({ editor, saveAsset }: { editor: any, saveAsset: (source: strin
             <div className="w-px h-4 bg-slate-300 dark:bg-slate-600 mx-1" />
             <button
                 onClick={triggerLinkPrompt}
-                className={`p-1.5 rounded hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors relative ${editor.isActive('link') ? 'bg-slate-200 dark:bg-slate-700 text-indigo-600 dark:text-indigo-400' : 'text-slate-600 dark:text-slate-400'}`}
-                title="Insert Link"
+                disabled={editor.state.selection.empty && !editor.isActive('link')}
+                className={`p-1.5 rounded transition-colors relative 
+                    ${editor.isActive('link') ? 'bg-slate-200 dark:bg-slate-700 text-indigo-600 dark:text-indigo-400' : 'text-slate-600 dark:text-slate-400'}
+                    ${(editor.state.selection.empty && !editor.isActive('link')) ? 'opacity-40 cursor-not-allowed' : 'hover:bg-slate-200 dark:hover:bg-slate-700 cursor-pointer'}
+                `}
+                title="Insert Link (Select text first)"
             >
                 <LinkIcon size={16} />
 
