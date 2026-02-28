@@ -3,12 +3,9 @@ import { FileText, FolderClosed, FolderOpen, Plus, Sun, Moon, Send, Loader2, Che
 import clsx from "clsx";
 import { open } from "@tauri-apps/plugin-dialog";
 import { homeDir } from "@tauri-apps/api/path";
-import { invoke } from "@tauri-apps/api/core";
-import { load } from "@tauri-apps/plugin-store";
 import Editor from "./components/Editor";
 import PublishSettingsDialog from "./components/PublishSettingsDialog";
 import { useVault, Post, VaultNode } from "./hooks/useVault";
-import { buildStaticSite } from "./utils/buildSite";
 import "./App.css";
 
 // ─── Storage helpers ──────────────────────────────────────────────────────────
@@ -213,12 +210,14 @@ function App() {
   const [activePost, setActivePost] = useState<Post | null>(null);
   const [editorContent, setEditorContent] = useState<string>("");
   const [isLoadingFile, setIsLoadingFile] = useState(false);
-  const [expandedPaths, setExpandedPaths] = useState<Set<string>>(new Set());
-  const [isPublishing, setIsPublishing] = useState(false);
+  const [sessionKey, setSessionKey] = useState("");
   const [isPublishSettingsOpen, setIsPublishSettingsOpen] = useState(false);
+  const [isPublishConfirmOpen, setIsPublishConfirmOpen] = useState(false);
   const [publishSuccess, setPublishSuccess] = useState(false);
+  const [isPublishing, setIsPublishing] = useState(false);
+  const [expandedPaths, setExpandedPaths] = useState<Set<string>>(new Set());
 
-  const { isInitializing, vaultError, setVaultError, initVault, getVaultTree, readPost, savePost, createPost, renamePost } = useVault(vaultPath);
+  const { isInitializing, vaultError, setVaultError, initVault, getVaultTree, readPost, savePost, createPost } = useVault(vaultPath);
   useEffect(() => {
     if (vaultPath) {
       initVault();
@@ -249,6 +248,7 @@ function App() {
   // Read content when active post changes
   useEffect(() => {
     if (activePost) {
+      setSessionKey(activePost.path + "-" + Date.now());
       setIsLoadingFile(true);
       const loadContent = async () => {
         const content = await readPost(activePost.path);
@@ -317,33 +317,53 @@ function App() {
   const handlePublish = async () => {
     try {
       if (!vaultPath) return;
+      const { load } = await import('@tauri-apps/plugin-store');
       const store = await load('settings.json');
       const repoUrl = await store.get<string>('github_repo_url');
       const pat = await store.get<string>('github_pat');
-      const authorName = await store.get<string>('github_author_name');
-      const authorEmail = await store.get<string>('github_author_email');
-      const customDomain = await store.get<string>('github_custom_domain') || '';
 
       if (!repoUrl || !pat) {
         setIsPublishSettingsOpen(true);
         return;
       }
 
+      setIsPublishConfirmOpen(true);
+    } catch (err) {
+      setIsPublishSettingsOpen(true);
+    }
+  };
+
+  const executePublish = async () => {
+    try {
+      setIsPublishConfirmOpen(false);
       setIsPublishing(true);
 
+      const { load } = await import('@tauri-apps/plugin-store');
+      const store = await load('settings.json');
+      const repoUrl = await store.get<string>('github_repo_url');
+      const pat = await store.get<string>('github_pat');
+      const authorName = await store.get<string>('github_author_name') || 'Writizen User';
+      const authorEmail = await store.get<string>('github_author_email') || 'user@writizen.local';
+      const customDomain = await store.get<string>('github_custom_domain');
+
+      if (!repoUrl || !pat || !vaultPath) return;
+
       // 1. Resolve absolute path of the local vault
+      const { homeDir } = await import('@tauri-apps/api/path');
       const home = await homeDir();
       const absoluteVaultPath = vaultPath.startsWith('/')
         ? vaultPath
         : `${home.replace(/\/$/, '')}/${vaultPath}`;
 
       // 2. Build the HTML Static Site using the absolute path
+      const { buildStaticSite } = await import('./utils/buildSite');
       await buildStaticSite(absoluteVaultPath, customDomain);
 
       // 3. Resolve absolute path of the 'out' directory
       const absoluteOutPath = `${absoluteVaultPath}/out`;
 
       // 4. Push *only* the 'out' directory to GitHub
+      const { invoke } = await import('@tauri-apps/api/core');
       await invoke('git_commit_and_push', {
         path: absoluteOutPath,
         repoUrl,
@@ -479,18 +499,11 @@ function App() {
                 </div>
               ) : (
                 <Editor
-                  key={activePost.path}
+                  key={sessionKey}
                   content={editorContent}
                   postPath={activePost.path}
                   onChange={(markdown) => {
                     savePost(activePost.path, markdown);
-                  }}
-                  onRename={async (newTitle) => {
-                    const renamed = await renamePost(activePost.path, newTitle);
-                    if (renamed) {
-                      setActivePost(renamed);
-                      await refreshTree();
-                    }
                   }}
                 />
               )}
@@ -529,9 +542,73 @@ function App() {
         onClose={() => setIsPublishSettingsOpen(false)}
         onSave={() => {
           setIsPublishSettingsOpen(false);
-          handlePublish();
+          setIsPublishConfirmOpen(true);
         }}
       />
+
+      {isPublishConfirmOpen && (
+        <PublishConfirmDialog
+          isOpen={isPublishConfirmOpen}
+          onClose={() => setIsPublishConfirmOpen(false)}
+          onConfirm={executePublish}
+        />
+      )}
+    </div>
+  );
+}
+
+function PublishConfirmDialog({ isOpen, onClose, onConfirm }: { isOpen: boolean, onClose: () => void, onConfirm: () => void }) {
+  const [repo, setRepo] = useState("");
+
+  useEffect(() => {
+    const fetchRepo = async () => {
+      const { load } = await import('@tauri-apps/plugin-store');
+      const store = await load('settings.json');
+      const r = await store.get<string>('github_repo_url');
+      if (r) setRepo(r);
+    };
+    fetchRepo();
+  }, []);
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-[110] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+      <div className="bg-white dark:bg-slate-900 w-full max-w-sm rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 p-6 animate-in zoom-in-95 duration-200">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="bg-indigo-100 dark:bg-indigo-500/20 p-2 rounded-xl text-indigo-600 dark:text-indigo-400">
+            <Send size={20} />
+          </div>
+          <h2 className="text-lg font-bold text-slate-900 dark:text-white">Ready to Publish?</h2>
+        </div>
+
+        <p className="text-sm text-slate-500 dark:text-slate-400 mb-6 font-medium">
+          Your site will be built and pushed to:
+        </p>
+
+        <div className="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl p-3 mb-8 break-all flex items-start gap-2">
+          <Settings size={14} className="mt-1 text-slate-400 shrink-0" />
+          <span className="text-xs font-mono text-slate-700 dark:text-slate-300">
+            {repo || "Checking repository..."}
+          </span>
+        </div>
+
+        <div className="flex gap-3">
+          <button
+            onClick={onClose}
+            className="flex-1 px-4 py-2.5 text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onConfirm}
+            className="flex-1 px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-medium transition-colors shadow-lg shadow-indigo-600/20 flex items-center justify-center gap-2"
+          >
+            <Send size={16} />
+            Publish Now
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

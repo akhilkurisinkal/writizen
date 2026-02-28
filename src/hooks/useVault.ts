@@ -101,16 +101,31 @@ export function useVault(vaultPath: string | null) {
         if (!POSTS_DIR) return null;
         try {
             setVaultError(null);
-            const id = Date.now().toString();
-            const filename = `Untitled-${id}.md`;
+            const { exists } = await import('@tauri-apps/plugin-fs');
+
+            // Loop to find the next available "Untitled" or "Untitled X" name
+            let baseName = "Untitled";
+            let filename = "Untitled.md";
+            let title = "Untitled";
+            let slug = "untitled";
+
+            let counter = 1;
+            while (await exists(await join(POSTS_DIR, filename), { baseDir: BaseDirectory.Home })) {
+                baseName = `Untitled ${counter}`;
+                filename = `${baseName}.md`;
+                title = baseName;
+                slug = `untitled-${counter}`;
+                counter++;
+            }
+
             const path = await join(POSTS_DIR, filename);
             const today = new Date().toISOString().split("T")[0];
 
-            const frontmatter = `---\ntitle: "Untitled"\ndate: "${today}"\nslug: "untitled-${id}"\nstatus: "draft"\n---\n`;
+            const frontmatter = `---\ntitle: "${title}"\ndate: "${today}"\nslug: "${slug}"\nstatus: "draft"\n---\n`;
             await writeTextFile(path, frontmatter, { baseDir: BaseDirectory.Home });
 
             return {
-                name: `Untitled-${id}`,
+                name: baseName,
                 path: `${POSTS_DIR}/${filename}`,
             };
         } catch (error) {
@@ -155,13 +170,11 @@ export function useVault(vaultPath: string | null) {
 
     const renamePost = useCallback(async (oldPath: string, newTitle: string): Promise<Post | null> => {
         try {
-            const { rename } = await import('@tauri-apps/plugin-fs');
-            let safeName = newTitle
-                .replace(/[^\w\s-]/g, "")
-                .replace(/\s+/g, "-")
-                .replace(/-+/g, "-")
-                .replace(/^-|-$/g, "");
+            const { readTextFile, writeTextFile, remove, exists } = await import('@tauri-apps/plugin-fs');
+            const { join } = await import('@tauri-apps/api/path');
+            const { parseFrontmatter, serializeFrontmatter, slugify } = await import('../utils/markdown');
 
+            let safeName = slugify(newTitle);
             if (!safeName) return null;
 
             const parts = oldPath.split("/");
@@ -171,20 +184,26 @@ export function useVault(vaultPath: string | null) {
             let newFilename = `${safeName}.md`;
             let newPath = await join(dir, newFilename);
 
-            if (oldPath === `${dir}/${newFilename}`) return null;
+            if (oldPath === newPath) return null;
 
             const targetExists = await exists(newPath, { baseDir: BaseDirectory.Home });
             if (targetExists) {
-                const suffix = Date.now().toString().slice(-4);
-                safeName = `${safeName}-${suffix}`;
-                newFilename = `${safeName}.md`;
-                newPath = await join(dir, newFilename);
+                const { message } = await import('@tauri-apps/plugin-dialog');
+                await message(`A post with the title "${newTitle}" already exists.`, { title: "Rename Failed", kind: "error" });
+                return null;
             }
 
-            await rename(oldPath, newPath, {
-                oldPathBaseDir: BaseDirectory.Home,
-                newPathBaseDir: BaseDirectory.Home,
-            });
+            // Read the old file to update its frontmatter slug and title
+            const rawContent = await readTextFile(oldPath, { baseDir: BaseDirectory.Home });
+            const { meta, body } = parseFrontmatter(rawContent);
+            meta.title = newTitle;
+            meta.slug = safeName;
+
+            const updatedContent = serializeFrontmatter(meta) + body;
+
+            // Write the new file and delete the old one to avoid ghost files
+            await writeTextFile(newPath, updatedContent, { baseDir: BaseDirectory.Home });
+            await remove(oldPath, { baseDir: BaseDirectory.Home });
 
             return {
                 name: safeName,

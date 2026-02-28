@@ -2,6 +2,7 @@ import { readDir, readTextFile, writeTextFile, mkdir, exists, copyFile } from '@
 import { join } from '@tauri-apps/api/path';
 import { marked } from 'marked';
 import { generateBlogHTML, generateIndexHTML } from './template';
+import { parseFrontmatter } from './markdown';
 
 export async function buildStaticSite(vaultPath: string, customDomain?: string): Promise<string> {
   try {
@@ -30,19 +31,22 @@ export async function buildStaticSite(vaultPath: string, customDomain?: string):
       if (!file.name) continue;
 
       const mdPath = await join(postsDir, file.name);
-      let content = await readTextFile(mdPath);
+      let rawContent = await readTextFile(mdPath);
 
-      // Attempt to extract a title from the first heading, else use filename
-      let title = file.name.replace('.md', '');
-      const titleMatch = content.match(/^#\s+(.+)$/m);
-      if (titleMatch) {
-        title = titleMatch[1];
-        // Optionally remove the title from the body so it doesn't duplicate the template header
-        // content = content.replace(titleMatch[0], '');
+      // Parse frontmatter
+      const { meta, body } = parseFrontmatter(rawContent);
+
+      // SKIP DRAFTS
+      if (meta.status !== 'ready') {
+        console.log(`Skipping draft: ${file.name}`);
+        continue;
       }
 
+      const title = meta.title || file.name.replace('.md', '');
+      const date = meta.date || new Date().toLocaleDateString();
+
       // Convert Markdown to HTML
-      const htmlContent = await marked.parse(content);
+      const htmlContent = await marked.parse(body);
 
       // Generate full HTML page
       const fullHtml = generateBlogHTML(title, htmlContent);
@@ -54,7 +58,7 @@ export async function buildStaticSite(vaultPath: string, customDomain?: string):
 
       postLinks.push({
         title,
-        date: new Date().toLocaleDateString(), // Simple date for now
+        date,
         slug: `posts/${slug}`
       });
     }

@@ -9,6 +9,7 @@ import { convertFileSrc } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
 import { Bold, Italic, Strikethrough, Heading1, Heading2, List, ListOrdered, Undo, Redo, Link as LinkIcon, Image as ImageIcon } from "lucide-react";
 import { useVault } from "../hooks/useVault";
+import { PostMeta, parseFrontmatter, serializeFrontmatter, slugify } from "../utils/markdown";
 
 // ─── HOME DIR CACHE ───────────────────────────────────────────────────────────
 let cachedHomeDir = "";
@@ -101,7 +102,6 @@ interface EditorProps {
     content: string;
     postPath: string;
     onChange: (markdown: string) => void;
-    onRename: (newTitle: string) => void;
 }
 
 // ─── TOOLBAR ──────────────────────────────────────────────────────────────────
@@ -247,61 +247,15 @@ function Toolbar({ editor, onInsertImage }: { editor: ReturnType<typeof useEdito
     );
 }
 
-// ─── POST METADATA ────────────────────────────────────────────────────────────
-interface PostMeta {
-    title: string;
-    date: string;
-    slug: string;
-    status: "draft" | "ready";
-}
 
-function parseFrontmatter(raw: string): { meta: PostMeta; body: string } {
-    const match = raw.match(/^---\n([\s\S]*?)\n---\n?([\s\S]*)$/);
-    const defaults: PostMeta = {
-        title: "Untitled",
-        date: new Date().toISOString().split("T")[0],
-        slug: "",
-        status: "draft",
-    };
-    if (!match) return { meta: defaults, body: raw };
-
-    const yaml = match[1];
-    const body = match[2];
-    const meta = { ...defaults };
-
-    for (const line of yaml.split("\n")) {
-        const [key, ...rest] = line.split(":");
-        const val = rest.join(":").trim().replace(/^["']|["']$/g, "");
-        if (key.trim() === "title") meta.title = val;
-        if (key.trim() === "date") meta.date = val;
-        if (key.trim() === "slug") meta.slug = val;
-        if (key.trim() === "status") meta.status = val === "ready" ? "ready" : "draft";
-    }
-    return { meta, body };
-}
-
-function serializeFrontmatter(meta: PostMeta): string {
-    return `---\ntitle: "${meta.title}"\ndate: "${meta.date}"\nslug: "${meta.slug}"\nstatus: "${meta.status}"\n---\n`;
-}
-
-function slugify(text: string): string {
-    return text
-        .toLowerCase()
-        .replace(/[^\w\s-]/g, "")
-        .replace(/\s+/g, "-")
-        .replace(/-+/g, "-")
-        .replace(/^-|-$/g, "");
-}
 
 // ─── METADATA HEADER ──────────────────────────────────────────────────────────
 function MetadataHeader({
     meta,
     onMetaChange,
-    onTitleBlur,
 }: {
     meta: PostMeta;
     onMetaChange: (updated: PostMeta) => void;
-    onTitleBlur: (title: string) => void;
 }) {
     const updateField = (field: keyof PostMeta, value: string) => {
         const updated = { ...meta, [field]: value };
@@ -319,7 +273,6 @@ function MetadataHeader({
                 type="text"
                 value={meta.title}
                 onChange={(e) => updateField("title", e.target.value)}
-                onBlur={(e) => onTitleBlur(e.target.value)}
                 placeholder="Post title…"
                 className="flex-1 text-xl font-semibold bg-transparent border-none outline-none text-slate-900 dark:text-white placeholder:text-slate-300 dark:placeholder:text-slate-600"
             />
@@ -353,7 +306,7 @@ function MetadataHeader({
 }
 
 // ─── MAIN EDITOR ──────────────────────────────────────────────────────────────
-export const EditorWrapper = ({ content, postPath: _postPath, onChange, onRename }: EditorProps) => {
+export const EditorWrapper = ({ content, postPath: _postPath, onChange }: EditorProps) => {
     const { saveAsset } = useVault(null); // The editor doesn't strictly need vault path for saveAsset as ASSETS_DIR is resolved internally if needed, but it should be null here or imported properly, wait, previously it was const { saveAsset } = useVault(null) but useVault takes vaultPath: string | null.
     // Actually previously it was `import { useVault } from "../hooks/useVault";` and `const { saveAsset } = useVault();` - wait, useVault expects `vaultPath: string | null` but TS allowed it if no args? No, useVault has `export function useVault(vaultPath: string | null)`
     // To be safe I will use `useVault(null)`.
@@ -365,6 +318,28 @@ export const EditorWrapper = ({ content, postPath: _postPath, onChange, onRename
     const [meta, setMeta] = React.useState<PostMeta>(parsed.current.meta);
     const metaRef = useRef(meta);
     metaRef.current = meta;
+
+    const latestContentRef = useRef<string | null>(null);
+    const debounceTimeout = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+
+    const debouncedOnChange = (fullMarkdown: string) => {
+        latestContentRef.current = fullMarkdown;
+        if (debounceTimeout.current) clearTimeout(debounceTimeout.current);
+
+        debounceTimeout.current = setTimeout(() => {
+            onChangeRef.current(fullMarkdown);
+            latestContentRef.current = null;
+        }, 800);
+    };
+
+    useEffect(() => {
+        return () => {
+            if (debounceTimeout.current && latestContentRef.current) {
+                clearTimeout(debounceTimeout.current);
+                onChangeRef.current(latestContentRef.current);
+            }
+        };
+    }, []);
 
     const initialHtml = useRef(marked.parse(parsed.current.body || "") as string);
 
@@ -383,7 +358,7 @@ export const EditorWrapper = ({ content, postPath: _postPath, onChange, onRename
             try {
                 const md = tiptapSerializer.serialize(editor.state.doc);
                 const full = serializeFrontmatter(metaRef.current) + md;
-                onChangeRef.current(full);
+                debouncedOnChange(full);
             } catch (err) {
                 console.error("Markdown serialization error:", err);
             }
@@ -398,7 +373,7 @@ export const EditorWrapper = ({ content, postPath: _postPath, onChange, onRename
             try {
                 const md = tiptapSerializer.serialize(editor.state.doc);
                 const full = serializeFrontmatter(updated) + md;
-                onChangeRef.current(full);
+                debouncedOnChange(full);
             } catch (err) {
                 console.error("Metadata save error:", err);
             }
@@ -462,7 +437,7 @@ export const EditorWrapper = ({ content, postPath: _postPath, onChange, onRename
 
     return (
         <div className="flex flex-col h-full w-full min-h-0 overflow-hidden">
-            <MetadataHeader meta={meta} onMetaChange={handleMetaChange} onTitleBlur={onRename} />
+            <MetadataHeader meta={meta} onMetaChange={handleMetaChange} />
             <Toolbar editor={editor} onInsertImage={handleInsertImage} />
 
             <div className="flex-1 min-h-0 overflow-y-auto bg-slate-100 dark:bg-slate-950">
