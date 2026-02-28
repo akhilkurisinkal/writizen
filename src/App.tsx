@@ -76,25 +76,29 @@ function App() {
         Custom Titlebar / Drag Region
         We place this absolute on top so the user can drag the frameless window 
       */}
-      <div
-        data-tauri-drag-region
-        className="absolute top-0 left-0 right-0 h-10 z-50 flex items-center justify-between px-4 no-drag"
-      >
-        <div data-tauri-drag-region className="w-full h-full absolute inset-0 z-0"></div>
-        <div className="z-10 flex items-center gap-2 pointer-events-auto">
-          {/* Mac traffic lights typically overlay here automatically if translucent/hidden */}
+      <div className="absolute top-0 left-0 right-0 h-10 z-50 flex items-center justify-between px-4 pointer-events-none">
+        {/* The actual draggable background */}
+        <div data-tauri-drag-region className="w-full h-full absolute inset-0 z-0 pointer-events-auto"></div>
+
+        {/* Spacing for native macOS traffic lights (Overlay style places them here) */}
+        <div className="z-10 flex items-center gap-2">
           <div className="w-16"></div>
         </div>
+
+        {/* Action Buttons top right */}
         <div className="z-10 flex items-center gap-3 pointer-events-auto">
           <button
             onClick={() => setIsDarkMode(!isDarkMode)}
-            className="p-1.5 rounded-md hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 transition-colors"
+            className="p-1.5 rounded-md hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 transition-colors cursor-pointer"
             title="Toggle theme"
           >
             {isDarkMode ? <Sun size={16} /> : <Moon size={16} />}
           </button>
 
-          <button className="flex items-center gap-2 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-md text-sm font-medium transition-colors shadow-sm shadow-indigo-600/20 disabled:opacity-50" disabled={!activePost}>
+          <button
+            className="flex items-center gap-2 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-md text-sm font-medium transition-colors shadow-sm shadow-indigo-600/20 disabled:opacity-50 cursor-pointer"
+            disabled={!activePost}
+          >
             <Send size={14} />
             Publish to Web
           </button>

@@ -12,11 +12,14 @@
   "app": {
     "windows": [
       {
-        "title": "tauri-app",
+        "title": "Writizen",
         "width": 1024,
         "height": 768,
-        "decorations": false,
-        "transparent": true
+        "minWidth": 800,
+        "minHeight": 600,
+        "decorations": true,
+        "hiddenTitle": true,
+        "titleBarStyle": "Overlay"
       }
     ],
     "security": {
