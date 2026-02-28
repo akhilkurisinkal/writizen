@@ -45,6 +45,17 @@
       ]
     },
     {
+      "identifier": "fs:allow-remove",
+      "allow": [
+        {
+          "path": "**"
+        },
+        {
+          "path": "**/.github/**"
+        }
+      ]
+    },
+    {
       "identifier": "fs:allow-read-dir",
       "allow": [
         {
