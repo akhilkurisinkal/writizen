@@ -16,12 +16,12 @@ let cachedHomeDir = "";
 import("@tauri-apps/api/path").then((m) => m.homeDir().then((d) => (cachedHomeDir = d)));
 
 // ─── CUSTOM IMAGE ─────────────────────────────────────────────────────────────
-const CustomImage = Image.extend({
+const createCustomImage = (vaultPath: string) => Image.extend({
     renderHTML({ HTMLAttributes }) {
         let src = HTMLAttributes.src as string;
-        if (src?.startsWith("../assets/") && cachedHomeDir) {
+        if (src?.startsWith("../assets/") && cachedHomeDir && vaultPath) {
             const filename = src.split("/").pop()!;
-            src = convertFileSrc(`${cachedHomeDir}/My_Blog_Vault/assets/${filename}`);
+            src = convertFileSrc(`${cachedHomeDir}/${vaultPath}/assets/${filename}`);
         }
         return ["img", { ...HTMLAttributes, src }];
     },
@@ -347,7 +347,7 @@ export const EditorWrapper = ({ content, postPath, vaultPath, onChange }: Editor
     const editor = useEditor({
         extensions: [
             StarterKit.configure({}),
-            CustomImage,
+            createCustomImage(vaultPath),
             Link.configure({
                 openOnClick: false,
                 autolink: true,
