@@ -136,15 +136,15 @@ export const EditorWrapper = ({ content, onChange }: EditorProps) => {
 
     const { saveAsset } = useVault();
 
-    // Handle Tauri Native OS Drag and Drop
+    // Handle Tauri Native OS Drag and Drop and Clipboard Paste
     useEffect(() => {
-        let unlisten: (() => void) | undefined;
+        let unlistenNativeDrop: (() => void) | undefined;
 
         const setupDragDrop = async () => {
             const { getCurrentWindow } = await import('@tauri-apps/api/window');
 
             // Listen for native OS drops anywhere on the window in Tauri v2
-            unlisten = await getCurrentWindow().onDragDropEvent(async (event: any) => {
+            unlistenNativeDrop = await getCurrentWindow().onDragDropEvent(async (event: any) => {
                 if (event.payload.type === 'drop' && event.payload.paths && event.payload.paths.length > 0 && editor) {
                     // Grab the first dropped file's absolute OS path
                     const sourcePath = event.payload.paths[0];
@@ -168,8 +168,28 @@ export const EditorWrapper = ({ content, onChange }: EditorProps) => {
 
         setupDragDrop();
 
+        // Handle HTML Clipboard Image Pastes (e.g. Command+V)
+        const handleGlobalPaste = async (event: ClipboardEvent) => {
+            if (event.clipboardData && event.clipboardData.files && event.clipboardData.files.length > 0 && editor) {
+                const file = event.clipboardData.files[0];
+                if (file.type.startsWith('image/')) {
+                    event.preventDefault(); // Prevent default browser paste behavior
+
+                    // Pass the browser File object to the Tauri vault to copy into local storage
+                    const newRelativePath = await saveAsset(file);
+                    if (newRelativePath) {
+                        editor.chain().focus().setImage({ src: newRelativePath }).run();
+                    }
+                }
+            }
+        };
+
+        // Attach listener to window rather than Tiptap directly so it works anywhere in the app
+        window.addEventListener('paste', handleGlobalPaste);
+
         return () => {
-            if (unlisten) unlisten();
+            if (unlistenNativeDrop) unlistenNativeDrop();
+            window.removeEventListener('paste', handleGlobalPaste);
         };
     }, [editor, saveAsset]);
 

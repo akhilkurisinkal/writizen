@@ -131,23 +131,37 @@ export function useVault() {
     }, [DRAFTS_DIR]);
 
     // Save a physical file from the OS (drag and drop) into the vault's assets folder
-    const saveAsset = useCallback(async (sourceOsPath: string): Promise<string | null> => {
+    const saveAsset = useCallback(async (sourceFile: string | File): Promise<string | null> => {
         try {
             setVaultError(null);
 
-            // Extract just the filename from the dropped OS path (e.g., /Users/name/Desktop/photo.png -> photo.png)
-            const filenameMatch = sourceOsPath.match(/[^/]+$/);
-            if (!filenameMatch) throw new Error("Could not parse filename from dropped path");
+            const { copyFile, writeFile } = await import('@tauri-apps/plugin-fs');
 
-            // Ensure unique filename to prevent overwrites
-            const uniqueFilename = `${Date.now()}-${filenameMatch[0].replace(/[^a-zA-Z0-9.-]/g, '_')}`;
-            const targetVaultRelativePath = `${ASSETS_DIR}/${uniqueFilename}`;
+            let uniqueFilename = "";
 
-            // Technically in Tauri v2 with copyFile, the source MUST be an absolute OS path, 
-            // but the destination can use the BaseDirectory scope. We import copyFile from fs plugin:
-            const { copyFile } = await import('@tauri-apps/plugin-fs');
+            if (typeof sourceFile === "string") {
+                // Handle dragged OS absolute path
+                const filenameMatch = sourceFile.match(/[^/]+$/);
+                if (!filenameMatch) throw new Error("Could not parse filename from dropped path");
 
-            await copyFile(sourceOsPath, targetVaultRelativePath, { toPathBaseDir: BaseDirectory.Home });
+                uniqueFilename = `${Date.now()}-${filenameMatch[0].replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+                const targetVaultRelativePath = `${ASSETS_DIR}/${uniqueFilename}`;
+
+                await copyFile(sourceFile, targetVaultRelativePath, { toPathBaseDir: BaseDirectory.Home });
+            } else if (sourceFile instanceof File) {
+                // Handle HTML clipboard File drop (e.g. Command+V)
+                // Extract original filename or fallback to default
+                const originalName = sourceFile.name || 'pasted-image.png';
+                uniqueFilename = `${Date.now()}-${originalName.replace(/[^a-zA-Z0-9.-]/g, '_')}`;
+
+                const targetVaultRelativePath = `${ASSETS_DIR}/${uniqueFilename}`;
+
+                const arrayBuffer = await sourceFile.arrayBuffer();
+                const buffer = new Uint8Array(arrayBuffer);
+                await writeFile(targetVaultRelativePath, buffer, { baseDir: BaseDirectory.Home });
+            } else {
+                return null;
+            }
 
             // Return the relative markdown path to be inserted into the editor (e.g., ../assets/123-photo.png)
             return `../assets/${uniqueFilename}`;

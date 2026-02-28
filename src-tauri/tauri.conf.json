@@ -22,7 +22,14 @@
       }
     ],
     "security": {
-      "csp": null
+      "assetProtocol": {
+        "enable": true,
+        "scope": [
+          "$HOME/**",
+          "**"
+        ]
+      },
+      "csp": "default-src 'self' 'unsafe-inline' 'unsafe-eval' asset: http://asset.localhost tauri:; img-src 'self' asset: http://asset.localhost blob: data:;"
     }
   },
   "bundle": {
