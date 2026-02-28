@@ -34,7 +34,7 @@
       ]
     },
     {
-      "identifier": "fs:allow-readdir",
+      "identifier": "fs:allow-read-dir",
       "allow": [
         {
           "path": "$HOME/My_Blog_Vault/**"
