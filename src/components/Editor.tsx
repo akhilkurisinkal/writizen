@@ -101,6 +101,7 @@ const tiptapSerializer = new MarkdownSerializer(
 interface EditorProps {
     content: string;
     postPath: string;
+    vaultPath: string;
     onChange: (markdown: string, path: string) => void;
 }
 
@@ -306,10 +307,8 @@ function MetadataHeader({
 }
 
 // ─── MAIN EDITOR ──────────────────────────────────────────────────────────────
-export const EditorWrapper = ({ content, postPath, onChange }: EditorProps) => {
-    const { saveAsset } = useVault(null); // The editor doesn't strictly need vault path for saveAsset as ASSETS_DIR is resolved internally if needed, but it should be null here or imported properly, wait, previously it was const { saveAsset } = useVault(null) but useVault takes vaultPath: string | null.
-    // Actually previously it was `import { useVault } from "../hooks/useVault";` and `const { saveAsset } = useVault();` - wait, useVault expects `vaultPath: string | null` but TS allowed it if no args? No, useVault has `export function useVault(vaultPath: string | null)`
-    // To be safe I will use `useVault(null)`.
+export const EditorWrapper = ({ content, postPath, vaultPath, onChange }: EditorProps) => {
+    const { saveAsset } = useVault(vaultPath);
 
     const onChangeRef = useRef(onChange);
     const postPathRef = useRef(postPath);

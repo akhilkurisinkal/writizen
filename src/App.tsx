@@ -640,7 +640,9 @@ function App() {
                   key={activePost.path}
                   content={editorContent}
                   postPath={activePost.path}
+                  vaultPath={vaultPath!}
                   onChange={(markdown, path) => {
+                    setEditorContent(markdown);
                     savePost(path, markdown);
                   }}
                 />
