@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Image from "@tiptap/extension-image";
-import { Bold, Italic, Strikethrough, Heading1, Heading2, List, ListOrdered, Quote } from "lucide-react";
+import { Bold, Italic, Strikethrough, Heading1, Heading2, List, ListOrdered, Quote, Link as LinkIcon, Image as ImageIcon } from "lucide-react";
 import { marked } from "marked";
 
 // Very basic Markdown Serializer for Tiptap (since we save as .md)
@@ -10,6 +10,8 @@ import { marked } from "marked";
 // For phase 3, we simply emit HTML. (We can refine markdown export later)
 import { defaultMarkdownSerializer } from "prosemirror-markdown";
 import { convertFileSrc } from "@tauri-apps/api/core";
+import { open } from "@tauri-apps/plugin-dialog";
+import Link from "@tiptap/extension-link";
 
 // Dynamically cache the home directory at launch for sync use inside Tiptap's AST renderer
 let cachedHomeDir = "";
@@ -37,7 +39,7 @@ interface EditorProps {
 // Import useVault to access the physical file saving logic
 import { useVault } from "../hooks/useVault";
 
-const MenuBar = ({ editor }: { editor: any }) => {
+const MenuBar = ({ editor, saveAsset }: { editor: any, saveAsset: (source: string | File) => Promise<string | null> }) => {
     if (!editor) {
         return null;
     }
@@ -47,8 +49,42 @@ const MenuBar = ({ editor }: { editor: any }) => {
         editor.view.focus();
     };
 
+    const setLink = () => {
+        const previousUrl = editor.getAttributes('link').href;
+        const url = window.prompt('URL', previousUrl);
+
+        if (url === null) return; // cancelled
+        if (url === '') {
+            editor.chain().focus().extendMarkRange('link').unsetLink().run();
+            return;
+        }
+
+        editor.chain().focus().extendMarkRange('link').setLink({ href: url }).run();
+    };
+
+    const addImage = async () => {
+        try {
+            const selected = await open({
+                multiple: false,
+                filters: [{
+                    name: 'Image',
+                    extensions: ['png', 'jpeg', 'jpg', 'gif', 'webp', 'svg']
+                }]
+            });
+
+            if (selected && typeof selected === 'string') {
+                const newRelativePath = await saveAsset(selected);
+                if (newRelativePath) {
+                    editor.chain().focus().setImage({ src: newRelativePath }).run();
+                }
+            }
+        } catch (e) {
+            console.error("Failed to insert image via dialog", e);
+        }
+    };
+
     return (
-        <div className="flex items-center gap-1 p-2 bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700/50 sticky top-0 z-10 mx-auto w-full transition-colors">
+        <div className="flex items-center gap-1 p-2 bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700/50 sticky top-0 z-10 mx-auto w-full transition-colors flex-wrap">
             <button
                 onClick={() => toggleCommand(() => editor.chain().focus().toggleBold().run())}
                 className={`p-1.5 rounded hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors ${editor.isActive('bold') ? 'bg-slate-200 dark:bg-slate-700 text-indigo-600 dark:text-indigo-400' : 'text-slate-600 dark:text-slate-400'}`}
@@ -70,7 +106,7 @@ const MenuBar = ({ editor }: { editor: any }) => {
             >
                 <Strikethrough size={16} />
             </button>
-            <div className="w-px h-4 bg-slate-300 dark:bg-slate-600 mx-2" />
+            <div className="w-px h-4 bg-slate-300 dark:bg-slate-600 mx-1" />
             <button
                 onClick={() => toggleCommand(() => editor.chain().focus().toggleHeading({ level: 1 }).run())}
                 className={`p-1.5 rounded hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors ${editor.isActive('heading', { level: 1 }) ? 'bg-slate-200 dark:bg-slate-700 text-indigo-600 dark:text-indigo-400' : 'text-slate-600 dark:text-slate-400'}`}
@@ -85,7 +121,7 @@ const MenuBar = ({ editor }: { editor: any }) => {
             >
                 <Heading2 size={16} />
             </button>
-            <div className="w-px h-4 bg-slate-300 dark:bg-slate-600 mx-2" />
+            <div className="w-px h-4 bg-slate-300 dark:bg-slate-600 mx-1" />
             <button
                 onClick={() => toggleCommand(() => editor.chain().focus().toggleBulletList().run())}
                 className={`p-1.5 rounded hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors ${editor.isActive('bulletList') ? 'bg-slate-200 dark:bg-slate-700 text-indigo-600 dark:text-indigo-400' : 'text-slate-600 dark:text-slate-400'}`}
@@ -107,6 +143,21 @@ const MenuBar = ({ editor }: { editor: any }) => {
             >
                 <Quote size={16} />
             </button>
+            <div className="w-px h-4 bg-slate-300 dark:bg-slate-600 mx-1" />
+            <button
+                onClick={setLink}
+                className={`p-1.5 rounded hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors ${editor.isActive('link') ? 'bg-slate-200 dark:bg-slate-700 text-indigo-600 dark:text-indigo-400' : 'text-slate-600 dark:text-slate-400'}`}
+                title="Insert Link"
+            >
+                <LinkIcon size={16} />
+            </button>
+            <button
+                onClick={addImage}
+                className="p-1.5 rounded hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors text-slate-600 dark:text-slate-400"
+                title="Insert Image"
+            >
+                <ImageIcon size={16} />
+            </button>
         </div>
     );
 };
@@ -119,6 +170,11 @@ export const EditorWrapper = ({ content, onChange }: EditorProps) => {
         extensions: [
             StarterKit,
             CustomImage,
+            Link.configure({
+                openOnClick: false,
+                autolink: true,
+                defaultProtocol: 'https'
+            }),
         ],
         content: htmlContent,
         editorProps: {
@@ -205,7 +261,7 @@ export const EditorWrapper = ({ content, onChange }: EditorProps) => {
     return (
         <div className="w-full h-full flex flex-col bg-slate-100 dark:bg-slate-900 border-x border-[var(--border-color)]">
             {/* 1. Fixed Action Toolbar (Word/Docs style) pinned completely outside the paper canvas */}
-            <MenuBar editor={editor} />
+            <MenuBar editor={editor} saveAsset={saveAsset} />
 
             {/* 2. Scrollable Canvas Area */}
             <div className="flex-1 overflow-y-auto px-12 py-16 flex justify-center">
