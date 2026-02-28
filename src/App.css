@@ -58,40 +58,107 @@ body {
   color: var(--text-color);
 }
 
-/* Fix Tailwind Typography Prose Margins in Tiptap Editor */
-.prose {
-  line-height: 1.5 !important;
+/* Custom WYSIWYG Tiptap Editor Styles (Replaces unstable Tailwind Prose) */
+.tiptap-canvas {
+  line-height: 1.6;
+  font-size: 1rem;
+  color: var(--text-color);
 }
 
-.prose p {
-  margin-top: 0 !important;
-  margin-bottom: 0.75em !important;
-  line-height: inherit !important;
+.tiptap-canvas input,
+.tiptap-canvas button {
+  font-family: inherit;
 }
 
-.prose h1,
-.prose h2,
-.prose h3 {
-  margin-top: 1.25em !important;
-  margin-bottom: 0.5em !important;
-  line-height: 1.25 !important;
+.tiptap-canvas p {
+  margin-top: 0;
+  margin-bottom: 0.75rem;
+  line-height: 1.6;
 }
 
-.prose ul,
-.prose ol {
-  margin-top: 0.5em !important;
-  margin-bottom: 0.5em !important;
+.tiptap-canvas h1 {
+  font-size: 2.25em;
+  font-weight: 700;
+  margin-top: 1.5rem;
+  margin-bottom: 0.75rem;
+  line-height: 1.2;
 }
 
-.prose li p {
-  margin-top: 0 !important;
-  margin-bottom: 0 !important;
+.tiptap-canvas h2 {
+  font-size: 1.5em;
+  font-weight: 600;
+  margin-top: 1.5rem;
+  margin-bottom: 0.75rem;
+  line-height: 1.3;
 }
 
-.prose strong,
-.prose b,
-.prose em {
-  line-height: inherit !important;
+.tiptap-canvas h3 {
+  font-size: 1.25em;
+  font-weight: 600;
+  margin-top: 1.25rem;
+  margin-bottom: 0.5rem;
+  line-height: 1.4;
+}
+
+.tiptap-canvas ul {
+  list-style-type: disc;
+  padding-left: 1.5rem;
+  margin-top: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.tiptap-canvas ol {
+  list-style-type: decimal;
+  padding-left: 1.5rem;
+  margin-top: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.tiptap-canvas li p {
+  margin: 0;
+}
+
+.tiptap-canvas blockquote {
+  border-left: 4px solid var(--border-color);
+  padding-left: 1rem;
+  margin-left: 0;
+  margin-right: 0;
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+  font-style: italic;
+  color: #64748b;
+}
+
+.dark .tiptap-canvas blockquote {
+  color: #94a3b8;
+}
+
+.tiptap-canvas strong,
+.tiptap-canvas b {
+  font-weight: 700;
+  color: inherit;
+}
+
+.tiptap-canvas em,
+.tiptap-canvas i {
+  font-style: italic;
+  color: inherit;
+}
+
+.tiptap-canvas a {
+  color: var(--color-primary);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+  cursor: pointer;
+}
+
+.tiptap-canvas img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 0.375rem;
+  margin-top: 1.5rem;
+  margin-bottom: 1.5rem;
+  display: block;
 }
 
 .ProseMirror {
