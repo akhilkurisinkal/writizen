@@ -46,6 +46,48 @@
   }
 }
 
+/* Basic UI styling below */
+body {
+  margin: 0;
+  padding: 0;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+  /* Prevent body scroll, handle scroll in React */
+  background-color: var(--bg-color);
+  color: var(--text-color);
+}
+
+/* Fix Tailwind Typography Prose Margins in Tiptap Editor */
+.prose p {
+  margin-top: 0.5em !important;
+  margin-bottom: 0.5em !important;
+  line-height: 1.6 !important;
+}
+
+.prose h1,
+.prose h2,
+.prose h3 {
+  margin-top: 1.5em !important;
+  margin-bottom: 0.5em !important;
+  line-height: 1.2 !important;
+}
+
+.prose ul,
+.prose ol {
+  margin-top: 0.5em !important;
+  margin-bottom: 0.5em !important;
+}
+
+.prose li p {
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+}
+
+.ProseMirror {
+  outline: none !important;
+}
+
 /* Utilities for structural UI vs editor text selection */
 @layer utilities {
   .allow-select {
