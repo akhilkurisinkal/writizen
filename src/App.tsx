@@ -11,6 +11,7 @@ function App() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [activePost, setActivePost] = useState<Post | null>(null);
   const [editorContent, setEditorContent] = useState<string>("");
+  const [isLoadingFile, setIsLoadingFile] = useState(false);
 
   const { isInitializing, vaultError, setVaultError, initVault, getPosts, readPost, savePost, createPost } = useVault();
 
@@ -33,13 +34,16 @@ function App() {
   // Read content when active post changes
   useEffect(() => {
     if (activePost) {
+      setIsLoadingFile(true);
       const loadContent = async () => {
         const content = await readPost(activePost.path);
         setEditorContent(content);
+        setIsLoadingFile(false);
       };
       loadContent();
     } else {
       setEditorContent("");
+      setIsLoadingFile(false);
     }
   }, [activePost, readPost]);
 
@@ -191,13 +195,22 @@ function App() {
         <div className="flex-1 overflow-y-auto w-full">
           {activePost ? (
             <div className="max-w-3xl mx-auto pt-16 pb-32 px-8">
-              <Editor
-                content={editorContent}
-                onChange={(markdown) => {
-                  setEditorContent(markdown);
-                  savePost(activePost.path, markdown);
-                }}
-              />
+              {isLoadingFile ? (
+                <div className="flex items-center justify-center h-64 text-slate-400 gap-2">
+                  <Loader2 size={18} className="animate-spin" />
+                  <span>Loading document...</span>
+                </div>
+              ) : (
+                <Editor
+                  key={activePost.path} // Force total unmount/remount when switching files
+                  content={editorContent}
+                  onChange={(markdown) => {
+                    // We only save to fs on keystroke, we intentionally avoid calling setEditorContent 
+                    // to prevent React from unnecessarily re-rendering the parent component during typing.
+                    savePost(activePost.path, markdown);
+                  }}
+                />
+              )}
             </div>
           ) : (
             <div className="flex-1 flex items-center justify-center h-full">

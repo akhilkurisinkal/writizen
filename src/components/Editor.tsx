@@ -27,7 +27,8 @@ const MilkdownEditor = ({ content, onChange }: EditorProps) => {
             .use(commonmark)
             .use(gfm)
             .use(listener);
-    }, [content]); // Re-initialize if the underlying file content changes completely (e.g., clicking a new file)
+    }, []); // Empty array! Never re-initialize on keystrokes to prevent typing bugs
+
 
     return <Milkdown />;
 };
