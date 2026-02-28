@@ -17,6 +17,7 @@ export interface Post {
 
 export function useVault() {
     const [isInitializing, setIsInitializing] = useState(true);
+    const [vaultError, setVaultError] = useState<string | null>(null);
 
     // Core Vault Paths based on BaseDirectory.Home
     const VAULT_NAME = 'My_Blog_Vault';
@@ -34,11 +35,13 @@ export function useVault() {
                 }
             } catch (e) {
                 console.error(`Error ensuring directory ${dirPath}`, e);
+                throw e; // Bubble up for the toast to catch
             }
         };
 
         try {
             setIsInitializing(true);
+            setVaultError(null);
 
             await ensureDir(VAULT_NAME);
             await ensureDir(DRAFTS_DIR);
@@ -58,7 +61,7 @@ export function useVault() {
             }
         } catch (error) {
             console.error("Failed to initialize vault", error);
-            alert("Tauri FS Error (initVault): " + String(error));
+            setVaultError("Vault Init Error: " + String(error));
         } finally {
             setIsInitializing(false);
         }
@@ -69,6 +72,7 @@ export function useVault() {
             const dirPath = isDraft ? DRAFTS_DIR : PUBLISHED_DIR;
             const entries = await readDir(dirPath, { baseDir: BaseDirectory.Home });
 
+            setVaultError(null);
             return entries
                 .filter(entry => entry.isFile && entry.name.endsWith('.md'))
                 .map(entry => ({
@@ -78,15 +82,18 @@ export function useVault() {
                 }));
         } catch (error) {
             console.error(`Failed to read posts from ${isDraft ? 'drafts' : 'published'}`, error);
+            setVaultError(`Read Dir Error (${isDraft ? 'drafts' : 'published'}): ` + String(error));
             return [];
         }
     }, [DRAFTS_DIR, PUBLISHED_DIR]);
 
     const readPost = useCallback(async (path: string): Promise<string> => {
         try {
+            setVaultError(null);
             return await readTextFile(path, { baseDir: BaseDirectory.Home });
         } catch (error) {
             console.error(`Failed to read file at ${path}`, error);
+            setVaultError(`Read File Error (${path}): ` + String(error));
             return "";
         }
     }, []);
@@ -97,12 +104,14 @@ export function useVault() {
             return true;
         } catch (error) {
             console.error(`Failed to save file at ${path}`, error);
+            setVaultError(`Save File Error: ` + String(error));
             return false;
         }
     }, []);
 
     const createPost = useCallback(async (): Promise<Post | null> => {
         try {
+            setVaultError(null);
             const id = Date.now().toString();
             const filename = `Untitled-${id}.md`;
             const path = await join(DRAFTS_DIR, filename);
@@ -116,13 +125,15 @@ export function useVault() {
             };
         } catch (error) {
             console.error("Failed to create new post", error);
-            alert("Failed to create post: " + String(error));
+            setVaultError("Create Post Error: " + String(error));
             return null;
         }
     }, [DRAFTS_DIR]);
 
     return {
         isInitializing,
+        vaultError,
+        setVaultError,
         initVault,
         getPosts,
         readPost,

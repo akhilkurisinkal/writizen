@@ -12,7 +12,7 @@ function App() {
   const [activePost, setActivePost] = useState<Post | null>(null);
   const [editorContent, setEditorContent] = useState<string>("");
 
-  const { isInitializing, initVault, getPosts, readPost, savePost, createPost } = useVault();
+  const { isInitializing, vaultError, setVaultError, initVault, getPosts, readPost, savePost, createPost } = useVault();
 
   // Initialize vault on startup
   useEffect(() => {
@@ -72,14 +72,22 @@ function App() {
 
   return (
     <div className="flex h-screen w-full bg-[var(--bg-color)] text-[var(--text-color)] antialiased selection:bg-indigo-500/30 overflow-hidden">
+      {/* In-App Error Toast */}
+      {vaultError && (
+        <div className="absolute bottom-4 right-4 bg-red-50 dark:bg-red-900 border-l-4 border-red-500 text-red-700 dark:text-red-200 p-4 rounded-md shadow-xl z-50 max-w-sm pointer-events-auto">
+          <div className="flex justify-between items-start mb-2">
+            <span className="font-bold text-sm">System Error</span>
+            <button onClick={() => setVaultError(null)} className="text-red-400 hover:text-red-700 dark:hover:text-red-100 font-bold ml-4 border-none bg-transparent cursor-pointer">✕</button>
+          </div>
+          <p className="text-xs break-words font-mono opacity-90">{vaultError}</p>
+        </div>
+      )}
+
       {/* 
         Custom Titlebar / Drag Region
-        We place this absolute on top so the user can drag the frameless window 
+        Using native macOS -webkit-app-region CSS so it doesn't block JavaScript clicks
       */}
-      <div
-        className="absolute top-0 left-0 right-0 h-10 z-50 flex items-center justify-between px-4"
-        data-tauri-drag-region
-      >
+      <div className="absolute top-0 left-0 right-0 h-10 z-50 flex items-center justify-between px-4 drag-region">
         {/* Spacing for native macOS traffic lights (Overlay style places them here) */}
         <div className="z-10 flex items-center gap-2 no-drag">
           <div className="w-16"></div>
