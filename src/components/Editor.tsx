@@ -1,31 +1,42 @@
 import { Editor, rootCtx, defaultValueCtx } from "@milkdown/core";
 import { commonmark } from "@milkdown/preset-commonmark";
 import { gfm } from "@milkdown/preset-gfm";
+import { listener, listenerCtx } from "@milkdown/plugin-listener";
 import { useEditor, Milkdown, MilkdownProvider } from "@milkdown/react";
 import { nord } from "@milkdown/theme-nord";
 
-// A wrapper component that consumes the Milkdown context
-const MilkdownEditor = () => {
+interface EditorProps {
+    content: string;
+    onChange: (markdown: string) => void;
+}
+
+const MilkdownEditor = ({ content, onChange }: EditorProps) => {
     useEditor((root: any) => {
         return Editor.make()
             .config((ctx: any) => {
                 ctx.set(rootCtx, root);
-                ctx.set(defaultValueCtx, "# Welcome to your new blog\n\nStart typing and watch the Markdown syntax disappear seamlessly...");
+                ctx.set(defaultValueCtx, content || "# Welcome to your new local-first blog!");
+
+                ctx.get(listenerCtx).markdownUpdated((_: any, markdown: string, prevMarkdown: string | null) => {
+                    if (markdown !== prevMarkdown) {
+                        onChange(markdown);
+                    }
+                });
             })
             .config(nord)
             .use(commonmark)
-            .use(gfm);
-    });
+            .use(gfm)
+            .use(listener);
+    }, [content]); // Re-initialize if the underlying file content changes completely (e.g., clicking a new file)
 
     return <Milkdown />;
 };
 
-// The exported Editor component wraps the provider
-export const EditorWrapper = () => {
+export const EditorWrapper = (props: EditorProps) => {
     return (
-        <div className="milkdown-container h-full w-full allow-select">
+        <div className="milkdown-container h-full w-full allow-select prose prose-indigo max-w-none">
             <MilkdownProvider>
-                <MilkdownEditor />
+                <MilkdownEditor {...props} />
             </MilkdownProvider>
         </div>
     );
