@@ -1,44 +1,59 @@
-import { Editor, rootCtx, defaultValueCtx } from "@milkdown/core";
-import { commonmark } from "@milkdown/preset-commonmark";
-import { gfm } from "@milkdown/preset-gfm";
-import { listener, listenerCtx } from "@milkdown/plugin-listener";
-import { useEditor, Milkdown, MilkdownProvider } from "@milkdown/react";
-import { nord } from "@milkdown/theme-nord";
+// @ts-ignore
+import { Crepe } from "@milkdown/crepe";
+import "@milkdown/crepe/theme/common/style.css";
+// We use the frame theme which closely matches our UI
+import "@milkdown/crepe/theme/frame/style.css";
+import { useEffect, useRef } from "react";
 
 interface EditorProps {
     content: string;
     onChange: (markdown: string) => void;
 }
 
-const MilkdownEditor = ({ content, onChange }: EditorProps) => {
-    useEditor((root: any) => {
-        return Editor.make()
-            .config((ctx: any) => {
-                ctx.set(rootCtx, root);
-                ctx.set(defaultValueCtx, content || "# Welcome to your new local-first blog!");
+export const EditorWrapper = ({ content, onChange }: EditorProps) => {
+    const editorRef = useRef<HTMLDivElement>(null);
+    const crepeRef = useRef<Crepe | null>(null);
 
-                ctx.get(listenerCtx).markdownUpdated((_: any, markdown: string, prevMarkdown: string | null) => {
-                    if (markdown !== prevMarkdown) {
-                        onChange(markdown);
-                    }
-                });
-            })
-            .config(nord)
-            .use(commonmark)
-            .use(gfm)
-            .use(listener);
-    }, []); // Empty array! Never re-initialize on keystrokes to prevent typing bugs
+    useEffect(() => {
+        if (!editorRef.current) return;
 
+        // Initialize Crepe (Milkdown's official WYSIWYG editor)
+        const crepe = new Crepe({
+            root: editorRef.current,
+            defaultValue: content || "# Welcome to your new local-first blog!",
+            features: {
+                // Enable the Notion-style slash menu and popup formatting toolbar
+                [Crepe.Feature.BlockEdit]: true,
+                [Crepe.Feature.Cursor]: true,
+                [Crepe.Feature.ListItem]: true
+            }
+        });
 
-    return <Milkdown />;
-};
+        // Set up the change listener to auto-save to the OS file system
+        crepe.on((listener) => {
+            listener.markdownUpdated((_, markdown, prevMarkdown) => {
+                if (markdown !== prevMarkdown) {
+                    onChange(markdown);
+                }
+            });
+        });
 
-export const EditorWrapper = (props: EditorProps) => {
+        crepe.create().then(() => {
+            crepeRef.current = crepe;
+        });
+
+        // Cleanup on unmount (e.g., when switching active files)
+        return () => {
+            if (crepeRef.current) {
+                crepeRef.current.destroy();
+                crepeRef.current = null;
+            }
+        };
+    }, []); // Empty array! Never re-mount on keystrokes.
+
     return (
-        <div className="milkdown-container h-full w-full allow-select prose prose-indigo max-w-none">
-            <MilkdownProvider>
-                <MilkdownEditor {...props} />
-            </MilkdownProvider>
+        <div className="crepe-container h-full w-full allow-select prose prose-indigo max-w-none">
+            <div ref={editorRef} className="h-full w-full" />
         </div>
     );
 };
