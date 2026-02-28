@@ -214,9 +214,32 @@ function VaultSetup({ onVaultSelected }: { onVaultSelected: (path: string) => vo
     }
   };
 
+  const handleOpenFolder = async () => {
+    try {
+      const home = await homeDir();
+      const selected = await open({
+        directory: true,
+        multiple: false,
+        defaultPath: home,
+        title: "Choose existing blog vault folder",
+      });
+
+      if (selected && typeof selected === "string") {
+        const homePath = home.endsWith('/') ? home.slice(0, -1) : home;
+        const relativePath = selected.startsWith(homePath)
+          ? selected.slice(homePath.length + 1)
+          : selected;
+
+        onVaultSelected(relativePath);
+      }
+    } catch (err) {
+      console.error("Folder selection failed:", err);
+    }
+  };
+
   return (
     <div className="flex items-center justify-center h-screen w-full bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900">
-      <div className="text-center max-w-md px-8 w-full">
+      <div className="text-center max-w-md px-8 w-full relative -mt-16">
         {/* Logo */}
         <div className="w-20 h-20 bg-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg shadow-indigo-600/20">
           <FileText size={36} className="text-white" />
@@ -226,41 +249,47 @@ function VaultSetup({ onVaultSelected }: { onVaultSelected: (path: string) => vo
           Welcome to Writizen
         </h1>
         <p className="text-sm text-slate-500 dark:text-slate-400 mb-8 leading-relaxed">
-          Choose where to store your blog. A new folder will be created at the location you select.
+          Create a new blog vault or open an existing one to get started.
         </p>
 
-        <div className="mb-6 text-left">
-          <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
-            Vault Name
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 mb-6 text-left shadow-sm">
+          <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3">
+            Create New Vault
           </label>
-          <input
-            type="text"
-            value={vaultName}
-            onChange={(e) => setVaultName(e.target.value)}
-            className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-shadow"
-            placeholder="My_Blog_Vault"
-          />
+          <div className="flex gap-3">
+            <input
+              type="text"
+              value={vaultName}
+              onChange={(e) => setVaultName(e.target.value)}
+              className="flex-1 min-w-0 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/50 transition-shadow"
+              placeholder="My_Blog_Vault"
+            />
+            <button
+              onClick={handleSelectFolder}
+              disabled={isCreating || !vaultName.trim()}
+              className="flex flex-shrink-0 items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-semibold transition-colors disabled:opacity-60"
+            >
+              {isCreating ? <Loader2 size={16} className="animate-spin" /> : <FolderPlus size={16} />}
+              Create
+            </button>
+          </div>
+        </div>
+
+        <div className="relative flex items-center py-2 mb-6 cursor-default">
+          <div className="flex-grow border-t border-slate-200 dark:border-slate-800"></div>
+          <span className="flex-shrink-0 mx-4 text-xs font-semibold text-slate-400 tracking-widest">OR</span>
+          <div className="flex-grow border-t border-slate-200 dark:border-slate-800"></div>
         </div>
 
         <button
-          onClick={handleSelectFolder}
-          disabled={isCreating || !vaultName.trim()}
-          className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-semibold transition-colors shadow-md shadow-indigo-600/20 disabled:opacity-60"
+          onClick={handleOpenFolder}
+          className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 rounded-xl text-sm font-semibold transition-colors shadow-sm"
         >
-          {isCreating ? (
-            <>
-              <Loader2 size={18} className="animate-spin" />
-              Creating Vault…
-            </>
-          ) : (
-            <>
-              <FolderPlus size={18} />
-              Choose Location & Create
-            </>
-          )}
+          <FolderOpen size={18} />
+          Open Existing Vault
         </button>
 
-        <p className="text-xs text-slate-400 dark:text-slate-500 mt-6">
+        <p className="text-xs text-slate-400 dark:text-slate-500 mt-8">
           Everything stays safely on your machine.
         </p>
       </div>
