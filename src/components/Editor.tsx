@@ -42,6 +42,18 @@ import { useVault } from "../hooks/useVault";
 const MenuBar = ({ editor, saveAsset }: { editor: any, saveAsset: (source: string | File) => Promise<string | null> }) => {
     const [linkPromptVisible, setLinkPromptVisible] = useState(false);
     const [linkUrl, setLinkUrl] = useState("");
+    const [, forceUpdate] = useState({});
+
+    // Force re-render of MenuBar on every editor transaction (selection changes, typing, etc)
+    // to guarantee the UI accurately reflects the Tiptap state.
+    useEffect(() => {
+        if (!editor) return;
+        const handleUpdate = () => forceUpdate({});
+        editor.on('transaction', handleUpdate);
+        return () => {
+            editor.off('transaction', handleUpdate);
+        };
+    }, [editor]);
 
     if (!editor) {
         return null;
@@ -53,6 +65,10 @@ const MenuBar = ({ editor, saveAsset }: { editor: any, saveAsset: (source: strin
     };
 
     const triggerLinkPrompt = () => {
+        if (editor.state.selection.empty && !editor.isActive('link')) {
+            // Must select text before linking
+            return;
+        }
         const previousUrl = editor.getAttributes('link').href;
         setLinkUrl(previousUrl || "");
         setLinkPromptVisible(true);
@@ -149,21 +165,24 @@ const MenuBar = ({ editor, saveAsset }: { editor: any, saveAsset: (source: strin
                 <Quote size={16} />
             </button>
             <div className="w-px h-4 bg-slate-300 dark:bg-slate-600 mx-1" />
-            <button
-                onClick={triggerLinkPrompt}
-                disabled={editor.state.selection.empty && !editor.isActive('link')}
-                className={`p-1.5 rounded transition-colors relative 
-                    ${editor.isActive('link') ? 'bg-slate-200 dark:bg-slate-700 text-indigo-600 dark:text-indigo-400' : 'text-slate-600 dark:text-slate-400'}
-                    ${(editor.state.selection.empty && !editor.isActive('link')) ? 'opacity-40 cursor-not-allowed' : 'hover:bg-slate-200 dark:hover:bg-slate-700 cursor-pointer'}
-                `}
-                title="Insert Link (Select text first)"
-            >
-                <LinkIcon size={16} />
+
+            {/* Link Tools wrapped in a relative container */}
+            <div className="relative flex items-center">
+                <button
+                    onClick={triggerLinkPrompt}
+                    className={`p-1.5 rounded transition-colors 
+                        ${editor.isActive('link') ? 'bg-slate-200 dark:bg-slate-700 text-indigo-600 dark:text-indigo-400' : 'text-slate-600 dark:text-slate-400'}
+                        ${(editor.state.selection.empty && !editor.isActive('link')) ? 'opacity-40 cursor-not-allowed' : 'hover:bg-slate-200 dark:hover:bg-slate-700 cursor-pointer'}
+                    `}
+                    title="Insert Link (Select text first)"
+                >
+                    <LinkIcon size={16} />
+                </button>
 
                 {/* Custom Link Popover to replace broken window.prompt */}
                 {linkPromptVisible && (
                     <div
-                        className="absolute top-full left-0 mt-2 p-2 bg-white dark:bg-slate-800 rounded shadow-lg border border-slate-200 dark:border-slate-700 flex gap-2 z-50 w-64"
+                        className="absolute top-full left-0 mt-2 p-2 bg-white dark:bg-slate-800 rounded shadow-[0_4px_20px_-4px_rgba(0,0,0,0.1)] border border-slate-200 dark:border-slate-700 flex gap-2 z-50 w-72"
                         onClick={(e) => e.stopPropagation()}
                     >
                         <input
@@ -175,18 +194,19 @@ const MenuBar = ({ editor, saveAsset }: { editor: any, saveAsset: (source: strin
                                 if (e.key === 'Enter') confirmLink();
                                 if (e.key === 'Escape') setLinkPromptVisible(false);
                             }}
-                            className="flex-1 px-2 py-1 text-sm bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded outline-none focus:ring-1 focus:ring-indigo-500 text-slate-900 dark:text-slate-100"
+                            className="flex-1 px-3 py-1.5 text-sm bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-slate-900 dark:text-slate-100"
                             autoFocus
                         />
                         <button
                             onClick={(e) => { e.stopPropagation(); confirmLink(); }}
-                            className="px-2 py-1 text-sm bg-indigo-600 text-white rounded hover:bg-indigo-700 transition-colors"
+                            className="px-3 py-1.5 text-sm font-medium bg-indigo-600 text-white rounded hover:bg-indigo-700 transition-colors shadow-sm"
                         >
                             Save
                         </button>
                     </div>
                 )}
-            </button>
+            </div>
+
             <button
                 onClick={addImage}
                 className="p-1.5 rounded hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors text-slate-600 dark:text-slate-400"
