@@ -83,38 +83,10 @@ function App() {
         </div>
       )}
 
-      {/* 
-        Custom Titlebar / Drag Region
-        Using native macOS -webkit-app-region CSS so it doesn't block JavaScript clicks
-      */}
-      <div className="absolute top-0 left-0 right-0 h-10 z-50 flex items-center justify-between px-4 drag-region">
-        {/* Spacing for native macOS traffic lights (Overlay style places them here) */}
-        <div className="z-10 flex items-center gap-2 no-drag">
-          <div className="w-16"></div>
-        </div>
 
-        {/* Action Buttons top right */}
-        <div className="z-10 flex items-center gap-3 no-drag">
-          <button
-            onClick={() => setIsDarkMode(!isDarkMode)}
-            className="p-1.5 rounded-md hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 transition-colors cursor-pointer"
-            title="Toggle theme"
-          >
-            {isDarkMode ? <Sun size={16} /> : <Moon size={16} />}
-          </button>
-
-          <button
-            className="flex items-center gap-2 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-md text-sm font-medium transition-colors shadow-sm shadow-indigo-600/20 disabled:opacity-50 cursor-pointer"
-            disabled={!activePost}
-          >
-            <Send size={14} />
-            Publish to Web
-          </button>
-        </div>
-      </div>
 
       {/* Sidebar Navigation */}
-      <aside className="w-64 flex-shrink-0 border-r border-[var(--border-color)] bg-[var(--sidebar-bg)] flex flex-col pt-12 relative z-40 relative">
+      <aside className="w-64 flex-shrink-0 border-r border-[var(--border-color)] bg-[var(--sidebar-bg)] flex flex-col pt-4 relative z-40 relative">
         <div className="p-4">
           <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Writer</p>
           <div className="space-y-1 mb-6">
@@ -193,7 +165,29 @@ function App() {
       </aside>
 
       {/* Main Editor Area */}
-      <main className="flex-1 flex flex-col bg-[var(--bg-color)] relative z-30 pt-10">
+      <main className="flex-1 flex flex-col bg-[var(--bg-color)] relative z-30">
+
+        {/* App Toolbar */}
+        <header className="h-14 flex items-center justify-end px-6 border-b border-[var(--border-color)] relative z-10 w-full bg-[var(--bg-color)]">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setIsDarkMode(!isDarkMode)}
+              className="p-1.5 rounded-md hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 transition-colors cursor-pointer"
+              title="Toggle theme"
+            >
+              {isDarkMode ? <Sun size={16} /> : <Moon size={16} />}
+            </button>
+
+            <button
+              className="flex items-center gap-2 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-md text-sm font-medium transition-colors shadow-sm shadow-indigo-600/20 disabled:opacity-50 cursor-pointer"
+              disabled={!activePost}
+            >
+              <Send size={14} />
+              Publish to Web
+            </button>
+          </div>
+        </header>
+
         <div className="flex-1 overflow-y-auto w-full">
           {activePost ? (
             <div className="max-w-3xl mx-auto pt-16 pb-32 px-8">
