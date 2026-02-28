@@ -171,13 +171,13 @@ export function useVault(vaultPath: string | null) {
         }
     }, [ASSETS_DIR]);
 
-    const renamePost = useCallback(async (oldPath: string, newTitle: string): Promise<Post | null> => {
+    const renamePost = useCallback(async (oldPath: string, newFilenameBase: string): Promise<Post | null> => {
         try {
-            const { readTextFile, writeTextFile, remove, exists } = await import('@tauri-apps/plugin-fs');
+            const { rename, exists, copyFile, remove } = await import('@tauri-apps/plugin-fs');
             const { join } = await import('@tauri-apps/api/path');
-            const { parseFrontmatter, serializeFrontmatter, slugify } = await import('../utils/markdown');
+            const { slugify } = await import('../utils/markdown');
 
-            let safeName = slugify(newTitle);
+            let safeName = slugify(newFilenameBase);
             if (!safeName) return null;
 
             const parts = oldPath.split("/");
@@ -192,21 +192,17 @@ export function useVault(vaultPath: string | null) {
             const targetExists = await exists(newPath, { baseDir: BaseDirectory.Home });
             if (targetExists) {
                 const { message } = await import('@tauri-apps/plugin-dialog');
-                await message(`A post with the title "${newTitle}" already exists.`, { title: "Rename Failed", kind: "error" });
+                await message(`A file named "${newFilename}" already exists.`, { title: "Rename Failed", kind: "error" });
                 return null;
             }
 
-            // Read the old file to update its frontmatter slug and title
-            const rawContent = await readTextFile(oldPath, { baseDir: BaseDirectory.Home });
-            const { meta, body } = parseFrontmatter(rawContent);
-            meta.title = newTitle;
-            meta.slug = safeName;
-
-            const updatedContent = serializeFrontmatter(meta) + body;
-
-            // Write the new file and delete the old one to avoid ghost files
-            await writeTextFile(newPath, updatedContent, { baseDir: BaseDirectory.Home });
-            await remove(oldPath, { baseDir: BaseDirectory.Home });
+            try {
+                await rename(oldPath, newPath, { oldPathBaseDir: BaseDirectory.Home, newPathBaseDir: BaseDirectory.Home });
+            } catch (err) {
+                // Fallback for cross-device or if rename fails in some Tauri setups
+                await copyFile(oldPath, newPath, { fromPathBaseDir: BaseDirectory.Home, toPathBaseDir: BaseDirectory.Home });
+                await remove(oldPath, { baseDir: BaseDirectory.Home });
+            }
 
             return {
                 name: safeName,

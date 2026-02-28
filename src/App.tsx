@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { FileText, FolderClosed, FolderOpen, Plus, Sun, Moon, Send, Loader2, ChevronRight, FolderPlus, LogOut, Settings, Trash2 } from "lucide-react";
+import { FileText, FolderClosed, FolderOpen, Plus, Sun, Moon, Send, Loader2, ChevronRight, FolderPlus, LogOut, Settings, Trash2, Edit2 } from "lucide-react";
 import clsx from "clsx";
 import { open } from "@tauri-apps/plugin-dialog";
 import { homeDir } from "@tauri-apps/api/path";
@@ -28,6 +28,7 @@ function TreeNode({
   expandedPaths,
   onToggleExpand,
   onDeletePost,
+  onRenamePost,
 }: {
   node: VaultNode;
   depth: number;
@@ -36,7 +37,21 @@ function TreeNode({
   expandedPaths: Set<string>;
   onToggleExpand: (path: string) => void;
   onDeletePost: (post: Post) => void;
+  onRenamePost: (post: Post, newName: string) => void;
 }) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editName, setEditName] = useState("");
+
+  const handleRenameSubmit = () => {
+    setIsEditing(false);
+    if (editName.trim() && editName.trim() !== node.name.replace('.md', '')) {
+      onRenamePost({
+        name: node.name.replace('.md', ''),
+        path: node.path,
+      }, editName.trim());
+    }
+  };
+
   if (node.isDir) {
     const isExpanded = expandedPaths.has(node.path);
     const isRoot = depth === 0;
@@ -76,6 +91,7 @@ function TreeNode({
                 expandedPaths={expandedPaths}
                 onToggleExpand={onToggleExpand}
                 onDeletePost={onDeletePost}
+                onRenamePost={onRenamePost}
               />
             ))}
           </div>
@@ -91,7 +107,7 @@ function TreeNode({
   return (
     <button
       onClick={() => {
-        if (isMd) {
+        if (isMd && !isEditing) {
           onSelectPost({
             name: node.name.replace('.md', ''),
             path: node.path,
@@ -109,24 +125,54 @@ function TreeNode({
       style={{ paddingLeft: `${depth * 14 + 6 + 14} px`, paddingRight: '6px' }}
       disabled={!isMd}
     >
-      <div className="flex items-center gap-1.5 min-w-0 pr-1 truncate">
+      <div className="flex items-center gap-1.5 min-w-0 pr-1 w-full truncate">
         <FileText size={13} className={clsx("shrink-0", isActive ? "text-indigo-500" : "text-slate-400")} />
-        <span className="truncate">{node.name}</span>
+        {isEditing ? (
+          <input
+            type="text"
+            value={editName}
+            autoFocus
+            onFocus={(e) => e.target.select()}
+            onChange={(e) => setEditName(e.target.value)}
+            onBlur={handleRenameSubmit}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') handleRenameSubmit();
+              if (e.key === 'Escape') setIsEditing(false);
+            }}
+            className="flex-1 min-w-0 bg-white dark:bg-slate-900 border border-indigo-500 rounded px-1.5 py-0 text-slate-800 dark:text-slate-200 outline-none"
+            onClick={(e) => e.stopPropagation()}
+          />
+        ) : (
+          <span className="truncate">{node.name}</span>
+        )}
       </div>
-      {isMd && (
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onDeletePost({
-              name: node.name.replace('.md', ''),
-              path: node.path,
-            });
-          }}
-          className="opacity-0 group-hover:opacity-100 p-1 text-slate-400 hover:text-red-500 transition-all rounded ml-auto flex-shrink-0"
-          title="Delete Post"
-        >
-          <Trash2 size={13} />
-        </button>
+      {isMd && !isEditing && (
+        <div className="opacity-0 group-hover:opacity-100 flex items-center ml-auto flex-shrink-0">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setEditName(node.name.replace('.md', ''));
+              setIsEditing(true);
+            }}
+            className="p-1 px-1.5 text-slate-400 hover:text-indigo-500 transition-all rounded"
+            title="Rename Post"
+          >
+            <Edit2 size={13} />
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onDeletePost({
+                name: node.name.replace('.md', ''),
+                path: node.path,
+              });
+            }}
+            className="p-1 px-1.5 text-slate-400 hover:text-red-500 transition-all rounded"
+            title="Delete Post"
+          >
+            <Trash2 size={13} />
+          </button>
+        </div>
       )}
     </button>
   );
@@ -236,7 +282,7 @@ function App() {
   const [isPublishing, setIsPublishing] = useState(false);
   const [expandedPaths, setExpandedPaths] = useState<Set<string>>(new Set());
 
-  const { isInitializing, vaultError, setVaultError, initVault, getVaultTree, readPost, savePost, createPost, deletePost } = useVault(vaultPath);
+  const { isInitializing, vaultError, setVaultError, initVault, getVaultTree, readPost, savePost, createPost, deletePost, renamePost } = useVault(vaultPath);
   useEffect(() => {
     if (vaultPath) {
       initVault();
@@ -324,6 +370,16 @@ function App() {
         }
         await refreshTree();
       }
+    }
+  };
+
+  const handleRenamePost = async (post: Post, newName: string) => {
+    const updatedPost = await renamePost(post.path, newName);
+    if (updatedPost) {
+      if (activePost?.path === post.path) {
+        setActivePost(updatedPost);
+      }
+      await refreshTree();
     }
   };
 
@@ -470,6 +526,7 @@ function App() {
               expandedPaths={expandedPaths}
               onToggleExpand={toggleExpand}
               onDeletePost={handleDeletePost}
+              onRenamePost={handleRenamePost}
             />
           ) : null}
         </div>
