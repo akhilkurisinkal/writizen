@@ -1,59 +1,140 @@
-// @ts-ignore
-import { Crepe } from "@milkdown/crepe";
-import "@milkdown/crepe/theme/common/style.css";
-// We use the frame theme which closely matches our UI
-import "@milkdown/crepe/theme/frame.css";
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
+import { useEditor, EditorContent } from "@tiptap/react";
+import StarterKit from "@tiptap/starter-kit";
+import Image from "@tiptap/extension-image";
+import { Bold, Italic, Strikethrough, Heading1, Heading2, List, ListOrdered, Quote } from "lucide-react";
+import { marked } from "marked";
+
+// Very basic Markdown Serializer for Tiptap (since we save as .md)
+// In a production app, we would use a robust ast parser, but for now we rely on Tiptap's HTML -> Markdown parsing or a separate library.
+// For phase 3, we simply emit HTML. (We can refine markdown export later)
+import { defaultMarkdownSerializer } from "prosemirror-markdown";
 
 interface EditorProps {
     content: string;
     onChange: (markdown: string) => void;
 }
 
-export const EditorWrapper = ({ content, onChange }: EditorProps) => {
-    const editorRef = useRef<HTMLDivElement>(null);
-    const crepeRef = useRef<Crepe | null>(null);
+const MenuBar = ({ editor }: { editor: any }) => {
+    if (!editor) {
+        return null;
+    }
 
-    useEffect(() => {
-        if (!editorRef.current) return;
-
-        // Initialize Crepe (Milkdown's official WYSIWYG editor)
-        const crepe = new Crepe({
-            root: editorRef.current,
-            defaultValue: content || "# Welcome to your new local-first blog!",
-            features: {
-                // Enable the Notion-style slash menu and popup formatting toolbar
-                [Crepe.Feature.BlockEdit]: true,
-                [Crepe.Feature.Cursor]: true,
-                [Crepe.Feature.ListItem]: true
-            }
-        });
-
-        // Set up the change listener to auto-save to the OS file system
-        crepe.on((listener) => {
-            listener.markdownUpdated((_, markdown, prevMarkdown) => {
-                if (markdown !== prevMarkdown) {
-                    onChange(markdown);
-                }
-            });
-        });
-
-        crepe.create().then(() => {
-            crepeRef.current = crepe;
-        });
-
-        // Cleanup on unmount (e.g., when switching active files)
-        return () => {
-            if (crepeRef.current) {
-                crepeRef.current.destroy();
-                crepeRef.current = null;
-            }
-        };
-    }, []); // Empty array! Never re-mount on keystrokes.
+    const toggleCommand = (command: () => void) => {
+        command();
+        editor.view.focus();
+    };
 
     return (
-        <div className="crepe-container h-full w-full allow-select prose prose-indigo max-w-none">
-            <div ref={editorRef} className="h-full w-full" />
+        <div className="flex items-center gap-1 p-2 bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700/50 sticky top-0 z-10 mx-auto w-full transition-colors">
+            <button
+                onClick={() => toggleCommand(() => editor.chain().focus().toggleBold().run())}
+                className={`p-1.5 rounded hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors ${editor.isActive('bold') ? 'bg-slate-200 dark:bg-slate-700 text-indigo-600 dark:text-indigo-400' : 'text-slate-600 dark:text-slate-400'}`}
+                title="Bold"
+            >
+                <Bold size={16} />
+            </button>
+            <button
+                onClick={() => toggleCommand(() => editor.chain().focus().toggleItalic().run())}
+                className={`p-1.5 rounded hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors ${editor.isActive('italic') ? 'bg-slate-200 dark:bg-slate-700 text-indigo-600 dark:text-indigo-400' : 'text-slate-600 dark:text-slate-400'}`}
+                title="Italic"
+            >
+                <Italic size={16} />
+            </button>
+            <button
+                onClick={() => toggleCommand(() => editor.chain().focus().toggleStrike().run())}
+                className={`p-1.5 rounded hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors ${editor.isActive('strike') ? 'bg-slate-200 dark:bg-slate-700 text-indigo-600 dark:text-indigo-400' : 'text-slate-600 dark:text-slate-400'}`}
+                title="Strikethrough"
+            >
+                <Strikethrough size={16} />
+            </button>
+            <div className="w-px h-4 bg-slate-300 dark:bg-slate-600 mx-2" />
+            <button
+                onClick={() => toggleCommand(() => editor.chain().focus().toggleHeading({ level: 1 }).run())}
+                className={`p-1.5 rounded hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors ${editor.isActive('heading', { level: 1 }) ? 'bg-slate-200 dark:bg-slate-700 text-indigo-600 dark:text-indigo-400' : 'text-slate-600 dark:text-slate-400'}`}
+                title="Heading 1"
+            >
+                <Heading1 size={16} />
+            </button>
+            <button
+                onClick={() => toggleCommand(() => editor.chain().focus().toggleHeading({ level: 2 }).run())}
+                className={`p-1.5 rounded hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors ${editor.isActive('heading', { level: 2 }) ? 'bg-slate-200 dark:bg-slate-700 text-indigo-600 dark:text-indigo-400' : 'text-slate-600 dark:text-slate-400'}`}
+                title="Heading 2"
+            >
+                <Heading2 size={16} />
+            </button>
+            <div className="w-px h-4 bg-slate-300 dark:bg-slate-600 mx-2" />
+            <button
+                onClick={() => toggleCommand(() => editor.chain().focus().toggleBulletList().run())}
+                className={`p-1.5 rounded hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors ${editor.isActive('bulletList') ? 'bg-slate-200 dark:bg-slate-700 text-indigo-600 dark:text-indigo-400' : 'text-slate-600 dark:text-slate-400'}`}
+                title="Bullet List"
+            >
+                <List size={16} />
+            </button>
+            <button
+                onClick={() => toggleCommand(() => editor.chain().focus().toggleOrderedList().run())}
+                className={`p-1.5 rounded hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors ${editor.isActive('orderedList') ? 'bg-slate-200 dark:bg-slate-700 text-indigo-600 dark:text-indigo-400' : 'text-slate-600 dark:text-slate-400'}`}
+                title="Ordered List"
+            >
+                <ListOrdered size={16} />
+            </button>
+            <button
+                onClick={() => toggleCommand(() => editor.chain().focus().toggleBlockquote().run())}
+                className={`p-1.5 rounded hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors ${editor.isActive('blockquote') ? 'bg-slate-200 dark:bg-slate-700 text-indigo-600 dark:text-indigo-400' : 'text-slate-600 dark:text-slate-400'}`}
+                title="Blockquote"
+            >
+                <Quote size={16} />
+            </button>
+        </div>
+    );
+};
+
+export const EditorWrapper = ({ content, onChange }: EditorProps) => {
+    // Parse the raw markdown from disk into HTML for initial Tiptap hydration
+    const htmlContent = marked.parse(content || "");
+
+    const editor = useEditor({
+        extensions: [
+            StarterKit,
+            Image,
+        ],
+        content: htmlContent,
+        editorProps: {
+            attributes: {
+                // Tailwind Typography styling applied directly to the Prosemirror canvas instance
+                class: 'prose prose-slate dark:prose-invert prose-indigo max-w-none focus:outline-none min-h-[500px] h-full',
+            },
+        },
+        onUpdate: ({ editor }) => {
+            // Re-serialize the editor document back into markdown format so the user's hard drive stays plain text
+            const markdownOutput = defaultMarkdownSerializer.serialize(editor.state.doc);
+            onChange(markdownOutput);
+        },
+    });
+
+    // Cleanup when component unmounts
+    useEffect(() => {
+        return () => {
+            if (editor) {
+                editor.destroy();
+            }
+        };
+    }, []);
+
+    return (
+        <div className="w-full h-full flex flex-col bg-slate-100 dark:bg-slate-900 border-x border-[var(--border-color)]">
+            {/* 1. Fixed Action Toolbar (Word/Docs style) pinned completely outside the paper canvas */}
+            <MenuBar editor={editor} />
+
+            {/* 2. Scrollable Canvas Area */}
+            <div className="flex-1 overflow-y-auto px-12 py-16 flex justify-center">
+
+                {/* 3. A4 Paper Element Wrapper */}
+                <div className="bg-white dark:bg-slate-950 w-full max-w-3xl min-h-[1000px] shadow-sm ring-1 ring-slate-900/5 dark:ring-white/10 rounded-sm p-12 transition-colors">
+                    <EditorContent editor={editor} className="h-full" />
+                </div>
+
+            </div>
         </div>
     );
 };

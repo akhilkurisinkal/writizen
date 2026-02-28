@@ -192,11 +192,11 @@ function App() {
           </div>
         </header>
 
-        <div className="flex-1 overflow-y-auto w-full">
+        <div className="flex-1 w-full overflow-hidden flex flex-col relative z-20">
           {activePost ? (
-            <div className="max-w-3xl mx-auto pt-16 pb-32 px-8">
+            <div className="w-full h-full flex flex-col relative">
               {isLoadingFile ? (
-                <div className="flex items-center justify-center h-64 text-slate-400 gap-2">
+                <div className="flex items-center justify-center flex-1 text-slate-400 gap-2">
                   <Loader2 size={18} className="animate-spin" />
                   <span>Loading document...</span>
                 </div>
