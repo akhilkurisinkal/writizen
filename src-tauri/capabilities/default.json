@@ -8,15 +8,17 @@
   "permissions": [
     "core:default",
     "opener:default",
+    "dialog:default",
     "fs:default",
+    "store:default",
     {
       "identifier": "fs:allow-read",
       "allow": [
         {
-          "path": "$HOME/My_Blog_Vault"
+          "path": "**"
         },
         {
-          "path": "$HOME/My_Blog_Vault/**"
+          "path": "**/.github/**"
         }
       ]
     },
@@ -24,10 +26,10 @@
       "identifier": "fs:allow-write",
       "allow": [
         {
-          "path": "$HOME/My_Blog_Vault"
+          "path": "**"
         },
         {
-          "path": "$HOME/My_Blog_Vault/**"
+          "path": "**/.github/**"
         }
       ]
     },
@@ -35,10 +37,10 @@
       "identifier": "fs:allow-mkdir",
       "allow": [
         {
-          "path": "$HOME/My_Blog_Vault"
+          "path": "**"
         },
         {
-          "path": "$HOME/My_Blog_Vault/**"
+          "path": "**/.github/**"
         }
       ]
     },
@@ -46,10 +48,10 @@
       "identifier": "fs:allow-read-dir",
       "allow": [
         {
-          "path": "$HOME/My_Blog_Vault"
+          "path": "**"
         },
         {
-          "path": "$HOME/My_Blog_Vault/**"
+          "path": "**/.github/**"
         }
       ]
     },
@@ -57,10 +59,10 @@
       "identifier": "fs:allow-exists",
       "allow": [
         {
-          "path": "$HOME/My_Blog_Vault"
+          "path": "**"
         },
         {
-          "path": "$HOME/My_Blog_Vault/**"
+          "path": "**/.github/**"
         }
       ]
     },
@@ -68,10 +70,10 @@
       "identifier": "fs:allow-write-text-file",
       "allow": [
         {
-          "path": "$HOME/My_Blog_Vault"
+          "path": "**"
         },
         {
-          "path": "$HOME/My_Blog_Vault/**"
+          "path": "**/.github/**"
         }
       ]
     },
@@ -79,10 +81,10 @@
       "identifier": "fs:allow-read-text-file",
       "allow": [
         {
-          "path": "$HOME/My_Blog_Vault"
+          "path": "**"
         },
         {
-          "path": "$HOME/My_Blog_Vault/**"
+          "path": "**/.github/**"
         }
       ]
     },
@@ -91,6 +93,9 @@
       "allow": [
         {
           "path": "**"
+        },
+        {
+          "path": "**/.github/**"
         }
       ]
     },
@@ -98,10 +103,32 @@
       "identifier": "fs:allow-read-file",
       "allow": [
         {
-          "path": "$HOME/My_Blog_Vault"
+          "path": "**"
         },
         {
-          "path": "$HOME/My_Blog_Vault/**"
+          "path": "**/.github/**"
+        }
+      ]
+    },
+    {
+      "identifier": "fs:allow-rename",
+      "allow": [
+        {
+          "path": "**"
+        },
+        {
+          "path": "**/.github/**"
+        }
+      ]
+    },
+    {
+      "identifier": "fs:allow-write-file",
+      "allow": [
+        {
+          "path": "**"
+        },
+        {
+          "path": "**/.github/**"
         }
       ]
     }

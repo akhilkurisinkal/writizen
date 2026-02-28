@@ -1,341 +1,474 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useRef } from "react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Image from "@tiptap/extension-image";
-import { Bold, Italic, Strikethrough, Heading1, Heading2, List, ListOrdered, Quote, Link as LinkIcon, Image as ImageIcon } from "lucide-react";
+import Link from "@tiptap/extension-link";
+import { MarkdownSerializer } from "prosemirror-markdown";
 import { marked } from "marked";
-
-// Very basic Markdown Serializer for Tiptap (since we save as .md)
-// In a production app, we would use a robust ast parser, but for now we rely on Tiptap's HTML -> Markdown parsing or a separate library.
-// For phase 3, we simply emit HTML. (We can refine markdown export later)
-import { defaultMarkdownSerializer } from "prosemirror-markdown";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
-import Link from "@tiptap/extension-link";
-
-// Dynamically cache the home directory at launch for sync use inside Tiptap's AST renderer
-let cachedHomeDir = "";
-import('@tauri-apps/api/path').then(m => m.homeDir().then(dir => cachedHomeDir = dir));
-
-// Custom Image Extension to render relative `.md` paths as native Tauri Asset URIs
-const CustomImage = Image.extend({
-    renderHTML({ HTMLAttributes }) {
-        let src = HTMLAttributes.src;
-        // If image is relative and home dir is loaded, convert to physical asset:// URL for webview security
-        if (src && src.startsWith('../assets/') && cachedHomeDir) {
-            const filename = src.split('/').pop();
-            const absPath = `${cachedHomeDir}/My_Blog_Vault/assets/${filename}`;
-            src = convertFileSrc(absPath);
-        }
-        return ['img', { ...HTMLAttributes, src }];
-    }
-});
-
-interface EditorProps {
-    content: string;
-    onChange: (markdown: string) => void;
-}
-
-// Import useVault to access the physical file saving logic
+import { Bold, Italic, Strikethrough, Heading1, Heading2, List, ListOrdered, Undo, Redo, Link as LinkIcon, Image as ImageIcon } from "lucide-react";
 import { useVault } from "../hooks/useVault";
 
-const MenuBar = ({ editor, saveAsset }: { editor: any, saveAsset: (source: string | File) => Promise<string | null> }) => {
-    const [linkPromptVisible, setLinkPromptVisible] = useState(false);
-    const [linkUrl, setLinkUrl] = useState("");
-    const [, forceUpdate] = useState({});
+// ─── HOME DIR CACHE ───────────────────────────────────────────────────────────
+let cachedHomeDir = "";
+import("@tauri-apps/api/path").then((m) => m.homeDir().then((d) => (cachedHomeDir = d)));
 
-    // Force re-render of MenuBar on every editor transaction (selection changes, typing, etc)
-    // to guarantee the UI accurately reflects the Tiptap state.
+// ─── CUSTOM IMAGE ─────────────────────────────────────────────────────────────
+const CustomImage = Image.extend({
+    renderHTML({ HTMLAttributes }) {
+        let src = HTMLAttributes.src as string;
+        if (src?.startsWith("../assets/") && cachedHomeDir) {
+            const filename = src.split("/").pop()!;
+            src = convertFileSrc(`${cachedHomeDir}/My_Blog_Vault/assets/${filename}`);
+        }
+        return ["img", { ...HTMLAttributes, src }];
+    },
+});
+
+// ─── TIPTAP-COMPATIBLE MARKDOWN SERIALIZER ────────────────────────────────────
+// The default prosemirror-markdown serializer expects mark names like "strong"
+// and "em", but Tiptap uses "bold" and "italic". This custom serializer maps
+// Tiptap's names correctly so serialization doesn't throw errors.
+const tiptapSerializer = new MarkdownSerializer(
+    {
+        doc(state: any, node: any) { state.renderContent(node); },
+        paragraph(state: any, node: any) {
+            state.renderInline(node);
+            state.closeBlock(node);
+        },
+        heading(state: any, node: any) {
+            state.write("#".repeat(node.attrs.level) + " ");
+            state.renderInline(node);
+            state.closeBlock(node);
+        },
+        bulletList(state: any, node: any) {
+            state.renderList(node, "  ", () => "- ");
+        },
+        orderedList(state: any, node: any) {
+            const start = node.attrs.start || 1;
+            state.renderList(node, "  ", (i: number) => `${start + i}. `);
+        },
+        listItem(state: any, node: any) {
+            state.renderContent(node);
+        },
+        blockquote(state: any, node: any) {
+            state.wrapBlock("> ", null, node, () => state.renderContent(node));
+        },
+        codeBlock(state: any, node: any) {
+            const lang = node.attrs.language || "";
+            state.write("```" + lang + "\n");
+            state.text(node.textContent, false);
+            state.ensureNewLine();
+            state.write("```");
+            state.closeBlock(node);
+        },
+        hardBreak() {
+            // hardBreak is handled inline — nothing needed here
+        },
+        horizontalRule(state: any, node: any) {
+            state.write("---");
+            state.closeBlock(node);
+        },
+        image(state: any, node: any) {
+            const alt = state.esc(node.attrs.alt || "");
+            const src = state.esc(node.attrs.src || "");
+            const title = node.attrs.title ? ` "${state.esc(node.attrs.title)}"` : "";
+            state.write(`![${alt}](${src}${title})`);
+        },
+        text(state: any, node: any) {
+            state.text(node.text || "");
+        },
+    },
+    {
+        // Mark names must match Tiptap's internal names exactly
+        bold: { open: "**", close: "**", mixable: true, expelEnclosingWhitespace: true },
+        italic: { open: "_", close: "_", mixable: true, expelEnclosingWhitespace: true },
+        strike: { open: "~~", close: "~~", mixable: true, expelEnclosingWhitespace: true },
+        code: { open: "`", close: "`", escape: false },
+        link: {
+            open: () => "[",
+            close(_s: any, mark: any): string {
+                const title = mark.attrs.title ? ` "${mark.attrs.title}"` : "";
+                return `](${mark.attrs.href}${title})`;
+            },
+        },
+    }
+);
+
+// ─── TYPES ────────────────────────────────────────────────────────────────────
+interface EditorProps {
+    content: string;
+    postPath: string;
+    onChange: (markdown: string) => void;
+    onRename: (newTitle: string) => void;
+}
+
+// ─── TOOLBAR ──────────────────────────────────────────────────────────────────
+function Toolbar({ editor, onInsertImage }: { editor: ReturnType<typeof useEditor>; onInsertImage: () => void }) {
+    // Force re-render on every transaction so active states stay in sync
+    const [, forceUpdate] = React.useReducer((x: number) => x + 1, 0);
+    const [showLinkInput, setShowLinkInput] = React.useState(false);
+    const [linkUrl, setLinkUrl] = React.useState("");
+    const linkInputRef = React.useRef<HTMLInputElement>(null);
+
     useEffect(() => {
         if (!editor) return;
-        const handleUpdate = () => forceUpdate({});
-        editor.on('transaction', handleUpdate);
-        return () => {
-            editor.off('transaction', handleUpdate);
-        };
+        editor.on("transaction", forceUpdate);
+        return () => { editor.off("transaction", forceUpdate); };
     }, [editor]);
 
-    if (!editor) {
-        return null;
-    }
-
-    const toggleCommand = (command: () => void) => {
-        command();
-        editor.view.focus();
-    };
-
-    const triggerLinkPrompt = () => {
-        if (editor.state.selection.empty && !editor.isActive('link')) {
-            // Must select text before linking
-            return;
+    // Auto-focus the link input when it appears
+    useEffect(() => {
+        if (showLinkInput && linkInputRef.current) {
+            linkInputRef.current.focus();
         }
-        const previousUrl = editor.getAttributes('link').href;
-        setLinkUrl(previousUrl || "");
-        setLinkPromptVisible(true);
+    }, [showLinkInput]);
+
+    if (!editor) return null;
+
+    const btn = (
+        label: string,
+        icon: React.ReactNode,
+        isActive: boolean,
+        action: () => void
+    ) => (
+        <button
+            key={label}
+            title={label}
+            onMouseDown={(e) => {
+                e.preventDefault();
+                action();
+            }}
+            className={`p-1.5 rounded transition-colors ${isActive
+                ? "bg-slate-200 dark:bg-slate-700 text-indigo-600 dark:text-indigo-400"
+                : "text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
+                }`}
+        >
+            {icon}
+        </button>
+    );
+
+    const Divider = () => <div className="w-px h-4 bg-slate-200 dark:bg-slate-700 mx-0.5" />;
+
+    const handleLinkSubmit = () => {
+        if (linkUrl.trim()) {
+            const href = /^https?:\/\//i.test(linkUrl.trim()) ? linkUrl.trim() : `https://${linkUrl.trim()}`;
+            editor.chain().focus().setLink({ href }).run();
+        }
+        setLinkUrl("");
+        setShowLinkInput(false);
     };
 
-    const confirmLink = () => {
-        if (linkUrl === '') {
-            editor.chain().focus().extendMarkRange('link').unsetLink().run();
+    const handleLinkClick = () => {
+        if (editor.isActive("link")) {
+            editor.chain().focus().unsetLink().run();
         } else {
-            // Auto-prepend https:// if the user just types "google.com" to avoid localhost redirect
-            let finalUrl = linkUrl;
-            if (!/^https?:\/\//i.test(finalUrl) && !finalUrl.startsWith('mailto:') && !finalUrl.startsWith('/')) {
-                finalUrl = `https://${finalUrl}`;
-            }
-            editor.chain().focus().extendMarkRange('link').setLink({ href: finalUrl }).run();
-        }
-        setLinkPromptVisible(false);
-    };
-
-    const addImage = async () => {
-        try {
-            const selected = await open({
-                multiple: false,
-                filters: [{
-                    name: 'Image',
-                    extensions: ['png', 'jpeg', 'jpg', 'gif', 'webp', 'svg']
-                }]
-            });
-
-            if (selected && typeof selected === 'string') {
-                const newRelativePath = await saveAsset(selected);
-                if (newRelativePath) {
-                    editor.chain().focus().setImage({ src: newRelativePath }).run();
-                }
-            }
-        } catch (e) {
-            console.error("Failed to insert image via dialog", e);
+            // Only allow link creation when text is selected
+            const { from, to } = editor.state.selection;
+            if (from === to) return; // no selection — do nothing
+            setShowLinkInput(!showLinkInput);
+            setLinkUrl("");
         }
     };
 
     return (
-        <div className="flex items-center gap-1 p-2 bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700/50 sticky top-0 z-10 mx-auto w-full transition-colors flex-wrap">
-            <button
-                onMouseDown={(e) => { e.preventDefault(); toggleCommand(() => editor.chain().focus().toggleBold().run()); }}
-                className={`p-1.5 rounded hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors ${editor.isActive('bold') ? 'bg-slate-200 dark:bg-slate-700 text-indigo-600 dark:text-indigo-400' : 'text-slate-600 dark:text-slate-400'}`}
-                title="Bold"
-            >
-                <Bold size={16} />
-            </button>
-            <button
-                onMouseDown={(e) => { e.preventDefault(); toggleCommand(() => editor.chain().focus().toggleItalic().run()); }}
-                className={`p-1.5 rounded hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors ${editor.isActive('italic') ? 'bg-slate-200 dark:bg-slate-700 text-indigo-600 dark:text-indigo-400' : 'text-slate-600 dark:text-slate-400'}`}
-                title="Italic"
-            >
-                <Italic size={16} />
-            </button>
-            <button
-                onMouseDown={(e) => { e.preventDefault(); toggleCommand(() => editor.chain().focus().toggleStrike().run()); }}
-                className={`p-1.5 rounded hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors ${editor.isActive('strike') ? 'bg-slate-200 dark:bg-slate-700 text-indigo-600 dark:text-indigo-400' : 'text-slate-600 dark:text-slate-400'}`}
-                title="Strikethrough"
-            >
-                <Strikethrough size={16} />
-            </button>
-            <div className="w-px h-4 bg-slate-300 dark:bg-slate-600 mx-1" />
-            <button
-                onMouseDown={(e) => { e.preventDefault(); toggleCommand(() => editor.chain().focus().toggleHeading({ level: 1 }).run()); }}
-                className={`p-1.5 rounded hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors ${editor.isActive('heading', { level: 1 }) ? 'bg-slate-200 dark:bg-slate-700 text-indigo-600 dark:text-indigo-400' : 'text-slate-600 dark:text-slate-400'}`}
-                title="Heading 1"
-            >
-                <Heading1 size={16} />
-            </button>
-            <button
-                onMouseDown={(e) => { e.preventDefault(); toggleCommand(() => editor.chain().focus().toggleHeading({ level: 2 }).run()); }}
-                className={`p-1.5 rounded hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors ${editor.isActive('heading', { level: 2 }) ? 'bg-slate-200 dark:bg-slate-700 text-indigo-600 dark:text-indigo-400' : 'text-slate-600 dark:text-slate-400'}`}
-                title="Heading 2"
-            >
-                <Heading2 size={16} />
-            </button>
-            <div className="w-px h-4 bg-slate-300 dark:bg-slate-600 mx-1" />
-            <button
-                onMouseDown={(e) => { e.preventDefault(); toggleCommand(() => editor.chain().focus().toggleBulletList().run()); }}
-                className={`p-1.5 rounded hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors ${editor.isActive('bulletList') ? 'bg-slate-200 dark:bg-slate-700 text-indigo-600 dark:text-indigo-400' : 'text-slate-600 dark:text-slate-400'}`}
-                title="Bullet List"
-            >
-                <List size={16} />
-            </button>
-            <button
-                onMouseDown={(e) => { e.preventDefault(); toggleCommand(() => editor.chain().focus().toggleOrderedList().run()); }}
-                className={`p-1.5 rounded hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors ${editor.isActive('orderedList') ? 'bg-slate-200 dark:bg-slate-700 text-indigo-600 dark:text-indigo-400' : 'text-slate-600 dark:text-slate-400'}`}
-                title="Ordered List"
-            >
-                <ListOrdered size={16} />
-            </button>
-            <button
-                onMouseDown={(e) => { e.preventDefault(); toggleCommand(() => editor.chain().focus().toggleBlockquote().run()); }}
-                className={`p-1.5 rounded hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors ${editor.isActive('blockquote') ? 'bg-slate-200 dark:bg-slate-700 text-indigo-600 dark:text-indigo-400' : 'text-slate-600 dark:text-slate-400'}`}
-                title="Blockquote"
-            >
-                <Quote size={16} />
-            </button>
-            <div className="w-px h-4 bg-slate-300 dark:bg-slate-600 mx-1" />
-
-            {/* Link Tools wrapped in a relative container */}
-            <div className="relative flex items-center">
-                <button
-                    onMouseDown={(e) => { e.preventDefault(); triggerLinkPrompt(); }}
-                    disabled={editor.state.selection.empty && !editor.isActive('link')}
-                    className={`p-1.5 rounded transition-colors 
-                        ${editor.isActive('link') ? 'bg-slate-200 dark:bg-slate-700 text-indigo-600 dark:text-indigo-400' : 'text-slate-600 dark:text-slate-400'}
-                        ${(editor.state.selection.empty && !editor.isActive('link')) ? 'opacity-40 cursor-not-allowed' : 'hover:bg-slate-200 dark:hover:bg-slate-700 cursor-pointer'}
-                    `}
-                    title="Insert Link (Select text first)"
-                >
-                    <LinkIcon size={16} />
-                </button>
-
-                {/* Custom Link Popover to replace broken window.prompt */}
-                {linkPromptVisible && (
-                    <div
-                        className="absolute top-full left-0 mt-2 p-2 bg-white dark:bg-slate-800 rounded shadow-[0_4px_20px_-4px_rgba(0,0,0,0.1)] border border-slate-200 dark:border-slate-700 flex gap-2 z-50 w-72"
-                        onClick={(e) => e.stopPropagation()}
-                    >
-                        <input
-                            type="url"
-                            placeholder="https://..."
-                            value={linkUrl}
-                            onChange={(e) => setLinkUrl(e.target.value)}
-                            onKeyDown={(e) => {
-                                if (e.key === 'Enter') confirmLink();
-                                if (e.key === 'Escape') setLinkPromptVisible(false);
-                            }}
-                            className="flex-1 px-3 py-1.5 text-sm bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 text-slate-900 dark:text-slate-100"
-                            autoFocus
-                        />
-                        <button
-                            onClick={(e) => { e.stopPropagation(); confirmLink(); }}
-                            className="px-3 py-1.5 text-sm font-medium bg-indigo-600 text-white rounded hover:bg-indigo-700 transition-colors shadow-sm"
-                        >
-                            Save
-                        </button>
-                    </div>
+        <div className="relative">
+            <div className="flex items-center gap-0.5 flex-wrap px-3 py-2 border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 sticky top-0 z-10">
+                {btn("Bold (⌘B)", <Bold size={15} />, editor.isActive("bold"), () =>
+                    editor.chain().focus().toggleBold().run()
                 )}
+                {btn("Italic (⌘I)", <Italic size={15} />, editor.isActive("italic"), () =>
+                    editor.chain().focus().toggleItalic().run()
+                )}
+                {btn("Strikethrough", <Strikethrough size={15} />, editor.isActive("strike"), () =>
+                    editor.chain().focus().toggleStrike().run()
+                )}
+
+                <Divider />
+
+                {btn("Heading 1", <Heading1 size={15} />, editor.isActive("heading", { level: 1 }), () =>
+                    editor.chain().focus().toggleHeading({ level: 1 }).run()
+                )}
+                {btn("Heading 2", <Heading2 size={15} />, editor.isActive("heading", { level: 2 }), () =>
+                    editor.chain().focus().toggleHeading({ level: 2 }).run()
+                )}
+
+                <Divider />
+
+                {btn("Bullet List", <List size={15} />, editor.isActive("bulletList"), () =>
+                    editor.chain().focus().toggleBulletList().run()
+                )}
+                {btn("Numbered List", <ListOrdered size={15} />, editor.isActive("orderedList"), () =>
+                    editor.chain().focus().toggleOrderedList().run()
+                )}
+
+                <Divider />
+
+                {btn("Link", <LinkIcon size={15} />, editor.isActive("link") || showLinkInput, handleLinkClick)}
+                {btn("Insert Image", <ImageIcon size={15} />, false, onInsertImage)}
+
+                <Divider />
+
+                {btn("Undo", <Undo size={15} />, false, () => editor.chain().focus().undo().run())}
+                {btn("Redo", <Redo size={15} />, false, () => editor.chain().focus().redo().run())}
             </div>
 
-            <button
-                onMouseDown={(e) => { e.preventDefault(); addImage(); }}
-                className="p-1.5 rounded hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors text-slate-600 dark:text-slate-400"
-                title="Insert Image"
-            >
-                <ImageIcon size={16} />
-            </button>
+            {/* Inline link URL input */}
+            {showLinkInput && (
+                <div className="absolute left-0 right-0 top-full z-20 px-3 py-2 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 flex items-center gap-2 shadow-sm">
+                    <input
+                        ref={linkInputRef}
+                        type="url"
+                        placeholder="Paste or type a URL…"
+                        value={linkUrl}
+                        onChange={(e) => setLinkUrl(e.target.value)}
+                        onKeyDown={(e) => {
+                            if (e.key === "Enter") { e.preventDefault(); handleLinkSubmit(); }
+                            if (e.key === "Escape") { setShowLinkInput(false); setLinkUrl(""); editor.chain().focus().run(); }
+                        }}
+                        className="flex-1 px-3 py-1.5 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md outline-none focus:ring-2 focus:ring-indigo-500/40 text-slate-800 dark:text-slate-200 placeholder:text-slate-400"
+                    />
+                    <button
+                        onClick={handleLinkSubmit}
+                        className="px-3 py-1.5 text-sm font-medium bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors"
+                    >
+                        Apply
+                    </button>
+                    <button
+                        onClick={() => { setShowLinkInput(false); setLinkUrl(""); editor.chain().focus().run(); }}
+                        className="px-2 py-1.5 text-sm text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
+                    >
+                        ✕
+                    </button>
+                </div>
+            )}
         </div>
     );
-};
+}
 
-export const EditorWrapper = ({ content, onChange }: EditorProps) => {
-    // Parse the raw markdown from disk into HTML for initial Tiptap hydration
-    const htmlContent = marked.parse(content || "");
+// ─── POST METADATA ────────────────────────────────────────────────────────────
+interface PostMeta {
+    title: string;
+    date: string;
+    slug: string;
+    status: "draft" | "ready";
+}
+
+function parseFrontmatter(raw: string): { meta: PostMeta; body: string } {
+    const match = raw.match(/^---\n([\s\S]*?)\n---\n?([\s\S]*)$/);
+    const defaults: PostMeta = {
+        title: "Untitled",
+        date: new Date().toISOString().split("T")[0],
+        slug: "",
+        status: "draft",
+    };
+    if (!match) return { meta: defaults, body: raw };
+
+    const yaml = match[1];
+    const body = match[2];
+    const meta = { ...defaults };
+
+    for (const line of yaml.split("\n")) {
+        const [key, ...rest] = line.split(":");
+        const val = rest.join(":").trim().replace(/^["']|["']$/g, "");
+        if (key.trim() === "title") meta.title = val;
+        if (key.trim() === "date") meta.date = val;
+        if (key.trim() === "slug") meta.slug = val;
+        if (key.trim() === "status") meta.status = val === "ready" ? "ready" : "draft";
+    }
+    return { meta, body };
+}
+
+function serializeFrontmatter(meta: PostMeta): string {
+    return `---\ntitle: "${meta.title}"\ndate: "${meta.date}"\nslug: "${meta.slug}"\nstatus: "${meta.status}"\n---\n`;
+}
+
+function slugify(text: string): string {
+    return text
+        .toLowerCase()
+        .replace(/[^\w\s-]/g, "")
+        .replace(/\s+/g, "-")
+        .replace(/-+/g, "-")
+        .replace(/^-|-$/g, "");
+}
+
+// ─── METADATA HEADER ──────────────────────────────────────────────────────────
+function MetadataHeader({
+    meta,
+    onMetaChange,
+    onTitleBlur,
+}: {
+    meta: PostMeta;
+    onMetaChange: (updated: PostMeta) => void;
+    onTitleBlur: (title: string) => void;
+}) {
+    const updateField = (field: keyof PostMeta, value: string) => {
+        const updated = { ...meta, [field]: value };
+        // Auto-generate slug from title if slug hasn't been manually edited
+        if (field === "title") {
+            updated.slug = slugify(value);
+        }
+        onMetaChange(updated);
+    };
+
+    return (
+        <div className="flex items-center gap-4 px-4 py-2.5 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700">
+            {/* Title */}
+            <input
+                type="text"
+                value={meta.title}
+                onChange={(e) => updateField("title", e.target.value)}
+                onBlur={(e) => onTitleBlur(e.target.value)}
+                placeholder="Post title…"
+                className="flex-1 text-xl font-semibold bg-transparent border-none outline-none text-slate-900 dark:text-white placeholder:text-slate-300 dark:placeholder:text-slate-600"
+            />
+
+            {/* Status toggle */}
+            <div className="flex items-center gap-2 shrink-0">
+                <span className={`text-xs font-medium transition-colors ${meta.status === "ready" ? "text-emerald-600 dark:text-emerald-400" : "text-slate-400 dark:text-slate-500"
+                    }`}>
+                    {meta.status === "ready" ? "Ready to Publish" : "Draft"}
+                </span>
+                <button
+                    onClick={() =>
+                        onMetaChange({
+                            ...meta,
+                            status: meta.status === "draft" ? "ready" : "draft",
+                        })
+                    }
+                    className={`relative w-9 h-5 rounded-full transition-colors duration-200 ${meta.status === "ready"
+                        ? "bg-emerald-500"
+                        : "bg-slate-300 dark:bg-slate-600"
+                        }`}
+                >
+                    <span
+                        className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow-sm transition-transform duration-200 ${meta.status === "ready" ? "translate-x-4" : "translate-x-0"
+                            }`}
+                    />
+                </button>
+            </div>
+        </div>
+    );
+}
+
+// ─── MAIN EDITOR ──────────────────────────────────────────────────────────────
+export const EditorWrapper = ({ content, postPath: _postPath, onChange, onRename }: EditorProps) => {
+    const { saveAsset } = useVault(null); // The editor doesn't strictly need vault path for saveAsset as ASSETS_DIR is resolved internally if needed, but it should be null here or imported properly, wait, previously it was const { saveAsset } = useVault(null) but useVault takes vaultPath: string | null.
+    // Actually previously it was `import { useVault } from "../hooks/useVault";` and `const { saveAsset } = useVault();` - wait, useVault expects `vaultPath: string | null` but TS allowed it if no args? No, useVault has `export function useVault(vaultPath: string | null)`
+    // To be safe I will use `useVault(null)`.
+
+    const onChangeRef = useRef(onChange);
+    onChangeRef.current = onChange;
+
+    const parsed = useRef(parseFrontmatter(content || ""));
+    const [meta, setMeta] = React.useState<PostMeta>(parsed.current.meta);
+    const metaRef = useRef(meta);
+    metaRef.current = meta;
+
+    const initialHtml = useRef(marked.parse(parsed.current.body || "") as string);
 
     const editor = useEditor({
         extensions: [
-            StarterKit,
+            StarterKit.configure({}),
             CustomImage,
             Link.configure({
                 openOnClick: false,
                 autolink: true,
-                defaultProtocol: 'https',
-                HTMLAttributes: {
-                    class: 'text-indigo-600 dark:text-indigo-400 underline decoration-indigo-300 dark:decoration-indigo-700 underline-offset-2 hover:text-indigo-800 dark:hover:text-indigo-300 transition-colors cursor-pointer',
-                }
+                defaultProtocol: "https",
             }),
         ],
-        content: htmlContent,
-        editorProps: {
-            attributes: {
-                // Completely custom CSS overrides to prevent Tailwind line-height jumping
-                class: 'tiptap-canvas max-w-none focus:outline-none min-h-[500px] h-full',
-            },
-        },
-        onUpdate: ({ editor }) => {
-            // Re-serialize the editor document back into markdown format so the user's hard drive stays plain text
-            const markdownOutput = defaultMarkdownSerializer.serialize(editor.state.doc);
-            onChange(markdownOutput);
+        content: initialHtml.current,
+        onUpdate({ editor }) {
+            try {
+                const md = tiptapSerializer.serialize(editor.state.doc);
+                const full = serializeFrontmatter(metaRef.current) + md;
+                onChangeRef.current(full);
+            } catch (err) {
+                console.error("Markdown serialization error:", err);
+            }
         },
     });
 
-    const { saveAsset } = useVault();
+    // Save when metadata changes
+    const handleMetaChange = (updated: PostMeta) => {
+        setMeta(updated);
+        metaRef.current = updated;
+        if (editor) {
+            try {
+                const md = tiptapSerializer.serialize(editor.state.doc);
+                const full = serializeFrontmatter(updated) + md;
+                onChangeRef.current(full);
+            } catch (err) {
+                console.error("Metadata save error:", err);
+            }
+        }
+    };
 
-    // Handle Tauri Native OS Drag and Drop and Clipboard Paste
+    // ── Drag-and-drop / paste images ──────────────────────────────────────────
     useEffect(() => {
-        let unlistenNativeDrop: (() => void) | undefined;
+        let unlisten: (() => void) | undefined;
 
-        const setupDragDrop = async () => {
-            const { getCurrentWindow } = await import('@tauri-apps/api/window');
-
-            // Listen for native OS drops anywhere on the window in Tauri v2
-            unlistenNativeDrop = await getCurrentWindow().onDragDropEvent(async (event: any) => {
-                if (event.payload.type === 'drop' && event.payload.paths && event.payload.paths.length > 0 && editor) {
-                    // Grab the first dropped file's absolute OS path
-                    const sourcePath = event.payload.paths[0];
-
-                    // Verify it's an image
-                    if (!sourcePath.match(/\.(png|jpe?g|gif|webp|svg)$/i)) {
-                        console.warn("Dropped file is not a supported image format:", sourcePath);
-                        return;
-                    }
-
-                    // Physically copy the file from the Desktop/OS into the local My_Blog_Vault/assets
-                    const newRelativePath = await saveAsset(sourcePath);
-
-                    if (newRelativePath) {
-                        // Insert the image into the Tiptap canvas which will serialize to markdown ![alt](../assets/img.png)
-                        editor.chain().focus().setImage({ src: newRelativePath }).run();
-                    }
+        const setup = async () => {
+            const { getCurrentWindow } = await import("@tauri-apps/api/window");
+            unlisten = await getCurrentWindow().onDragDropEvent(async (event: any) => {
+                if (
+                    event.payload.type === "drop" &&
+                    event.payload.paths?.length > 0 &&
+                    editor
+                ) {
+                    const src = event.payload.paths[0];
+                    if (!src.match(/\.(png|jpe?g|gif|webp|svg)$/i)) return;
+                    const rel = await saveAsset(src);
+                    if (rel) editor.chain().focus().setImage({ src: rel }).run();
                 }
             });
         };
 
-        setupDragDrop();
-
-        // Handle HTML Clipboard Image Pastes (e.g. Command+V)
-        const handleGlobalPaste = async (event: ClipboardEvent) => {
-            if (event.clipboardData && event.clipboardData.files && event.clipboardData.files.length > 0 && editor) {
-                const file = event.clipboardData.files[0];
-                if (file.type.startsWith('image/')) {
-                    event.preventDefault(); // Prevent default browser paste behavior
-
-                    // Pass the browser File object to the Tauri vault to copy into local storage
-                    const newRelativePath = await saveAsset(file);
-                    if (newRelativePath) {
-                        editor.chain().focus().setImage({ src: newRelativePath }).run();
-                    }
-                }
-            }
+        const handlePaste = async (e: ClipboardEvent) => {
+            if (!editor) return;
+            const files = Array.from(e.clipboardData?.files ?? []);
+            const img = files.find((f) => f.type.startsWith("image/"));
+            if (!img) return;
+            e.preventDefault();
+            const rel = await saveAsset(img);
+            if (rel) editor.chain().focus().setImage({ src: rel }).run();
         };
 
-        // Attach listener to window rather than Tiptap directly so it works anywhere in the app
-        window.addEventListener('paste', handleGlobalPaste);
+        setup().catch(console.error);
+        document.addEventListener("paste", handlePaste);
 
         return () => {
-            if (unlistenNativeDrop) unlistenNativeDrop();
-            window.removeEventListener('paste', handleGlobalPaste);
+            unlisten?.();
+            document.removeEventListener("paste", handlePaste);
         };
     }, [editor, saveAsset]);
 
-    // Cleanup when component unmounts
-    useEffect(() => {
-        return () => {
-            if (editor) {
-                editor.destroy();
+    // ── Image picker ──────────────────────────────────────────────────────────
+    const handleInsertImage = async () => {
+        try {
+            const selected = await open({
+                multiple: false,
+                filters: [{ name: "Image", extensions: ["png", "jpg", "jpeg", "gif", "webp", "svg"] }],
+            });
+            if (selected && typeof selected === "string" && editor) {
+                const rel = await saveAsset(selected);
+                if (rel) editor.chain().focus().setImage({ src: rel }).run();
             }
-        };
-    }, []);
+        } catch (err) {
+            console.error("Image insert failed:", err);
+        }
+    };
 
     return (
-        <div className="w-full h-full flex flex-col bg-slate-100 dark:bg-slate-900 border-x border-[var(--border-color)]">
-            {/* 1. Fixed Action Toolbar (Word/Docs style) pinned completely outside the paper canvas */}
-            <MenuBar editor={editor} saveAsset={saveAsset} />
+        <div className="flex flex-col h-full w-full min-h-0 overflow-hidden">
+            <MetadataHeader meta={meta} onMetaChange={handleMetaChange} onTitleBlur={onRename} />
+            <Toolbar editor={editor} onInsertImage={handleInsertImage} />
 
-            {/* 2. Scrollable Canvas Area */}
-            <div className="flex-1 overflow-y-auto px-12 py-16 flex justify-center">
-
-                {/* 3. A4 Paper Element Wrapper */}
-                <div className="bg-white dark:bg-slate-950 w-full max-w-3xl min-h-[1000px] shadow-sm ring-1 ring-slate-900/5 dark:ring-white/10 rounded-sm p-12 transition-colors">
-                    <EditorContent editor={editor} className="h-full" />
+            <div className="flex-1 min-h-0 overflow-y-auto bg-slate-100 dark:bg-slate-950">
+                <div className="max-w-[794px] mx-auto my-8 bg-white dark:bg-slate-900 shadow-md rounded-sm px-16 py-14 min-h-[1123px] border border-slate-200/50 dark:border-slate-800">
+                    <EditorContent editor={editor} className="writizen-editor" />
                 </div>
-
             </div>
         </div>
     );

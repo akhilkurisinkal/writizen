@@ -1,0 +1,146 @@
+import { readDir, readTextFile, writeTextFile, mkdir, exists, copyFile } from '@tauri-apps/plugin-fs';
+import { join } from '@tauri-apps/api/path';
+import { marked } from 'marked';
+import { generateBlogHTML, generateIndexHTML } from './template';
+
+export async function buildStaticSite(vaultPath: string, customDomain?: string): Promise<string> {
+  try {
+    const postsDir = await join(vaultPath, 'posts');
+    const outDir = await join(vaultPath, 'out');
+    const assetsDir = await join(vaultPath, 'assets');
+    const outAssetsDir = await join(outDir, 'assets');
+
+    // 1. Create/Ensure out directories exist
+    if (!(await exists(outDir))) {
+      await mkdir(outDir, { recursive: true });
+    }
+    const outPostsDir = await join(outDir, 'posts');
+    if (!(await exists(outPostsDir))) {
+      await mkdir(outPostsDir, { recursive: true });
+    }
+
+    // 2. Read all markdown files
+    const entries = await readDir(postsDir);
+    const mdFiles = entries.filter(e => e.isFile && e.name && e.name.endsWith('.md'));
+
+    const postLinks: { title: string, date: string, slug: string }[] = [];
+
+    // 3. Process each post
+    for (const file of mdFiles) {
+      if (!file.name) continue;
+
+      const mdPath = await join(postsDir, file.name);
+      let content = await readTextFile(mdPath);
+
+      // Attempt to extract a title from the first heading, else use filename
+      let title = file.name.replace('.md', '');
+      const titleMatch = content.match(/^#\s+(.+)$/m);
+      if (titleMatch) {
+        title = titleMatch[1];
+        // Optionally remove the title from the body so it doesn't duplicate the template header
+        // content = content.replace(titleMatch[0], '');
+      }
+
+      // Convert Markdown to HTML
+      const htmlContent = await marked.parse(content);
+
+      // Generate full HTML page
+      const fullHtml = generateBlogHTML(title, htmlContent);
+
+      // Write to out/posts folder
+      const slug = file.name.replace('.md', '.html');
+      const outPath = await join(outPostsDir, slug);
+      await writeTextFile(outPath, fullHtml);
+
+      postLinks.push({
+        title,
+        date: new Date().toLocaleDateString(), // Simple date for now
+        slug: `posts/${slug}`
+      });
+    }
+
+    // 4. Generate Index Page
+    const indexHtml = generateIndexHTML(postLinks);
+    const indexPath = await join(outDir, 'index.html');
+    await writeTextFile(indexPath, indexHtml);
+
+    // 4.5. Generate GitHub Actions Deploy Workflow
+    // This completely automates GitHub Pages without the user touching settings
+    const githubWorkflowsDir = await join(outDir, '.github', 'workflows');
+    if (!(await exists(githubWorkflowsDir))) {
+      await mkdir(githubWorkflowsDir, { recursive: true });
+    }
+
+    const deployYml = `
+name: Deploy static content to Pages
+
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: \${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: '.'
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+`;
+    const deployYmlPath = await join(githubWorkflowsDir, 'deploy.yml');
+    await writeTextFile(deployYmlPath, deployYml.trim());
+
+    // 4.6 Handle Custom Domain CNAME Generation
+    if (customDomain && customDomain.trim() !== '') {
+      const cnamePath = await join(outDir, 'CNAME');
+      await writeTextFile(cnamePath, customDomain.trim());
+    }
+
+    // 5. Copy Assets (Images) if they exist
+    if (await exists(assetsDir)) {
+      if (!(await exists(outAssetsDir))) {
+        await mkdir(outAssetsDir, { recursive: true });
+      }
+      const assetEntries = await readDir(assetsDir);
+      for (const asset of assetEntries) {
+        if (asset.isFile && asset.name) {
+          const srcPath = await join(assetsDir, asset.name);
+          const destPath = await join(outAssetsDir, asset.name);
+          // Note: read/write binary for images instead of copyFile if Tauri copyFile is flaky, 
+          // but copyFile should work on desktop.
+          try {
+            // Basic naive copy - @tauri-apps/plugin-fs copyFile is experimental but usually available
+            await copyFile(srcPath, destPath);
+          } catch (e) {
+            console.warn("Could not copy asset", asset.name, e);
+          }
+        }
+      }
+    }
+
+    return outDir;
+  } catch (error) {
+    console.error("Static build failed:", error);
+    throw error;
+  }
+}
