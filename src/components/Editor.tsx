@@ -9,6 +9,25 @@ import { marked } from "marked";
 // In a production app, we would use a robust ast parser, but for now we rely on Tiptap's HTML -> Markdown parsing or a separate library.
 // For phase 3, we simply emit HTML. (We can refine markdown export later)
 import { defaultMarkdownSerializer } from "prosemirror-markdown";
+import { convertFileSrc } from "@tauri-apps/api/core";
+
+// Dynamically cache the home directory at launch for sync use inside Tiptap's AST renderer
+let cachedHomeDir = "";
+import('@tauri-apps/api/path').then(m => m.homeDir().then(dir => cachedHomeDir = dir));
+
+// Custom Image Extension to render relative `.md` paths as native Tauri Asset URIs
+const CustomImage = Image.extend({
+    renderHTML({ HTMLAttributes }) {
+        let src = HTMLAttributes.src;
+        // If image is relative and home dir is loaded, convert to physical asset:// URL for webview security
+        if (src && src.startsWith('../assets/') && cachedHomeDir) {
+            const filename = src.split('/').pop();
+            const absPath = `${cachedHomeDir}/My_Blog_Vault/assets/${filename}`;
+            src = convertFileSrc(absPath);
+        }
+        return ['img', { ...HTMLAttributes, src }];
+    }
+});
 
 interface EditorProps {
     content: string;
@@ -99,7 +118,7 @@ export const EditorWrapper = ({ content, onChange }: EditorProps) => {
     const editor = useEditor({
         extensions: [
             StarterKit,
-            Image,
+            CustomImage,
         ],
         content: htmlContent,
         editorProps: {

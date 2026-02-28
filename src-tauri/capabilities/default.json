@@ -86,12 +86,22 @@
         }
       ]
     },
-    "window:default",
     {
       "identifier": "fs:allow-copy-file",
       "allow": [
         {
           "path": "**"
+        }
+      ]
+    },
+    {
+      "identifier": "fs:allow-read-file",
+      "allow": [
+        {
+          "path": "$HOME/My_Blog_Vault"
+        },
+        {
+          "path": "$HOME/My_Blog_Vault/**"
         }
       ]
     }
