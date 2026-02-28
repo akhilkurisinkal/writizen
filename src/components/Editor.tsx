@@ -245,7 +245,7 @@ export const EditorWrapper = ({ content, onChange }: EditorProps) => {
         editorProps: {
             attributes: {
                 // Tailwind Typography styling applied directly to the Prosemirror canvas instance
-                class: 'prose prose-slate dark:prose-invert prose-indigo max-w-none focus:outline-none min-h-[500px] h-full marker:text-slate-400 dark:marker:text-slate-500 prose-p:my-4 prose-headings:my-6 prose-ul:list-disc prose-ol:list-decimal',
+                class: 'prose prose-slate dark:prose-invert prose-indigo max-w-none focus:outline-none min-h-[500px] h-full marker:text-slate-400 dark:marker:text-slate-500 prose-ul:list-disc prose-ol:list-decimal',
             },
         },
         parseOptions: {

@@ -59,18 +59,22 @@ body {
 }
 
 /* Fix Tailwind Typography Prose Margins in Tiptap Editor */
+.prose {
+  line-height: 1.5 !important;
+}
+
 .prose p {
-  margin-top: 0.5em !important;
-  margin-bottom: 0.5em !important;
-  line-height: 1.6 !important;
+  margin-top: 0 !important;
+  margin-bottom: 0.75em !important;
+  line-height: inherit !important;
 }
 
 .prose h1,
 .prose h2,
 .prose h3 {
-  margin-top: 1.5em !important;
+  margin-top: 1.25em !important;
   margin-bottom: 0.5em !important;
-  line-height: 1.2 !important;
+  line-height: 1.25 !important;
 }
 
 .prose ul,
@@ -82,6 +86,12 @@ body {
 .prose li p {
   margin-top: 0 !important;
   margin-bottom: 0 !important;
+}
+
+.prose strong,
+.prose b,
+.prose em {
+  line-height: inherit !important;
 }
 
 .ProseMirror {
