@@ -6,7 +6,7 @@ export interface PostMeta {
 }
 
 export function parseFrontmatter(raw: string): { meta: PostMeta; body: string } {
-    const match = raw.match(/^---\n([\s\S]*?)\n---\n?([\s\S]*)$/);
+    const match = raw.match(/^\s*---\r?\n([\s\S]*?)\r?\n---\r?\n?([\s\S]*)$/);
     const defaults: PostMeta = {
         title: "Untitled",
         date: new Date().toISOString().split("T")[0],
@@ -19,7 +19,8 @@ export function parseFrontmatter(raw: string): { meta: PostMeta; body: string } 
     const body = match[2];
     const meta = { ...defaults };
 
-    for (const line of yaml.split("\n")) {
+    const lines = yaml.split(/\r?\n/);
+    for (const line of lines) {
         const [key, ...rest] = line.split(":");
         if (!key || rest.length === 0) continue;
         const val = rest.join(":").trim().replace(/^["']|["']$/g, "");
