@@ -7,21 +7,23 @@ import { MarkdownSerializer } from "prosemirror-markdown";
 import { marked } from "marked";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import { open } from "@tauri-apps/plugin-dialog";
-import { Bold, Italic, Strikethrough, Heading1, Heading2, List, ListOrdered, Undo, Redo, Link as LinkIcon, Image as ImageIcon } from "lucide-react";
+import { Bold, Italic, Strikethrough, Heading1, Heading2, List, ListOrdered, Undo, Redo, Link as LinkIcon, Image as ImageIcon, Loader2 } from "lucide-react";
 import { useVault } from "../hooks/useVault";
 import { PostMeta, parseFrontmatter, serializeFrontmatter, slugify } from "../utils/markdown";
 
 // ─── HOME DIR CACHE ───────────────────────────────────────────────────────────
-let cachedHomeDir = "";
-import("@tauri-apps/api/path").then((m) => m.homeDir().then((d) => (cachedHomeDir = d)));
+// Home dir is now passed from App.tsx via props for stability and reactivity.
 
 // ─── CUSTOM IMAGE ─────────────────────────────────────────────────────────────
-const createCustomImage = (vaultPath: string) => Image.extend({
+const createCustomImage = (vaultPath: string, homeDir: string) => Image.extend({
     renderHTML({ HTMLAttributes }) {
         let src = HTMLAttributes.src as string;
-        if (src?.startsWith("../assets/") && cachedHomeDir && vaultPath) {
+        if (src?.startsWith("../assets/") && homeDir && vaultPath) {
             const filename = src.split("/").pop()!;
-            src = convertFileSrc(`${cachedHomeDir}/${vaultPath}/assets/${filename}`);
+            // Remove any potential double slashes
+            const cleanHome = homeDir.endsWith('/') ? homeDir.slice(0, -1) : homeDir;
+            const cleanVault = vaultPath.startsWith('/') ? vaultPath.slice(1) : vaultPath;
+            src = convertFileSrc(`${cleanHome}/${cleanVault}/assets/${filename}`);
         }
         return ["img", { ...HTMLAttributes, src }];
     },
@@ -102,6 +104,7 @@ interface EditorProps {
     content: string;
     postPath: string;
     vaultPath: string;
+    homeDir: string;
     onChange: (markdown: string, path: string) => void;
 }
 
@@ -307,8 +310,17 @@ function MetadataHeader({
 }
 
 // ─── MAIN EDITOR ──────────────────────────────────────────────────────────────
-export const EditorWrapper = ({ content, postPath, vaultPath, onChange }: EditorProps) => {
+export const EditorWrapper = ({ content, postPath, vaultPath, homeDir, onChange }: EditorProps) => {
     const { saveAsset } = useVault(vaultPath);
+
+    if (!homeDir) {
+        return (
+            <div className="flex items-center justify-center flex-1 text-slate-400 gap-2 h-full">
+                <Loader2 size={18} className="animate-spin" />
+                <span>Initializing editor…</span>
+            </div>
+        );
+    }
 
     const onChangeRef = useRef(onChange);
     const postPathRef = useRef(postPath);
@@ -347,7 +359,7 @@ export const EditorWrapper = ({ content, postPath, vaultPath, onChange }: Editor
     const editor = useEditor({
         extensions: [
             StarterKit.configure({}),
-            createCustomImage(vaultPath),
+            createCustomImage(vaultPath, homeDir),
             Link.configure({
                 openOnClick: false,
                 autolink: true,

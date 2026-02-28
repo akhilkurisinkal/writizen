@@ -323,6 +323,11 @@ function App() {
   const [publishSuccess, setPublishSuccess] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
   const [expandedPaths, setExpandedPaths] = useState<Set<string>>(new Set());
+  const [homeDirPath, setHomeDirPath] = useState<string>("");
+
+  useEffect(() => {
+    import("@tauri-apps/api/path").then(m => m.homeDir().then(setHomeDirPath));
+  }, []);
 
   const { isInitializing, vaultError, setVaultError, initVault, getVaultTree, readPost, savePost, createPost, deletePost, renamePost } = useVault(vaultPath);
   useEffect(() => {
@@ -641,6 +646,7 @@ function App() {
                   content={editorContent}
                   postPath={activePost.path}
                   vaultPath={vaultPath!}
+                  homeDir={homeDirPath}
                   onChange={(markdown, path) => {
                     setEditorContent(markdown);
                     savePost(path, markdown);
