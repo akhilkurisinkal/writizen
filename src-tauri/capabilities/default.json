@@ -13,6 +13,9 @@
       "identifier": "fs:allow-read",
       "allow": [
         {
+          "path": "$HOME/My_Blog_Vault"
+        },
+        {
           "path": "$HOME/My_Blog_Vault/**"
         }
       ]
@@ -20,6 +23,9 @@
     {
       "identifier": "fs:allow-write",
       "allow": [
+        {
+          "path": "$HOME/My_Blog_Vault"
+        },
         {
           "path": "$HOME/My_Blog_Vault/**"
         }
@@ -29,6 +35,9 @@
       "identifier": "fs:allow-mkdir",
       "allow": [
         {
+          "path": "$HOME/My_Blog_Vault"
+        },
+        {
           "path": "$HOME/My_Blog_Vault/**"
         }
       ]
@@ -37,6 +46,9 @@
       "identifier": "fs:allow-read-dir",
       "allow": [
         {
+          "path": "$HOME/My_Blog_Vault"
+        },
+        {
           "path": "$HOME/My_Blog_Vault/**"
         }
       ]
@@ -44,6 +56,9 @@
     {
       "identifier": "fs:allow-exists",
       "allow": [
+        {
+          "path": "$HOME/My_Blog_Vault"
+        },
         {
           "path": "$HOME/My_Blog_Vault/**"
         }

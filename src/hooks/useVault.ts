@@ -52,6 +52,7 @@ export function useVault() {
             }
         } catch (error) {
             console.error("Failed to initialize vault", error);
+            alert("Tauri FS Error (initVault): " + String(error));
         } finally {
             setIsInitializing(false);
         }

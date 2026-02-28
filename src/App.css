@@ -8,6 +8,9 @@
   --color-neutral-slatedark: #0f172a;
 }
 
+/* Enable manual dark mode via .dark class */
+@custom-variant dark (&:where(.dark, .dark *));
+
 @layer base {
   :root {
     --bg-color: #ffffff;
