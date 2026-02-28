@@ -74,6 +74,17 @@
           "path": "$HOME/My_Blog_Vault/**"
         }
       ]
+    },
+    {
+      "identifier": "fs:allow-read-text-file",
+      "allow": [
+        {
+          "path": "$HOME/My_Blog_Vault"
+        },
+        {
+          "path": "$HOME/My_Blog_Vault/**"
+        }
+      ]
     }
   ]
 }
