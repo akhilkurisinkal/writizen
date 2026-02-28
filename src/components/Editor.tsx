@@ -78,7 +78,12 @@ const MenuBar = ({ editor, saveAsset }: { editor: any, saveAsset: (source: strin
         if (linkUrl === '') {
             editor.chain().focus().extendMarkRange('link').unsetLink().run();
         } else {
-            editor.chain().focus().extendMarkRange('link').setLink({ href: linkUrl }).run();
+            // Auto-prepend https:// if the user just types "google.com" to avoid localhost redirect
+            let finalUrl = linkUrl;
+            if (!/^https?:\/\//i.test(finalUrl) && !finalUrl.startsWith('mailto:') && !finalUrl.startsWith('/')) {
+                finalUrl = `https://${finalUrl}`;
+            }
+            editor.chain().focus().extendMarkRange('link').setLink({ href: finalUrl }).run();
         }
         setLinkPromptVisible(false);
     };
@@ -107,21 +112,21 @@ const MenuBar = ({ editor, saveAsset }: { editor: any, saveAsset: (source: strin
     return (
         <div className="flex items-center gap-1 p-2 bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700/50 sticky top-0 z-10 mx-auto w-full transition-colors flex-wrap">
             <button
-                onClick={() => toggleCommand(() => editor.chain().focus().toggleBold().run())}
+                onMouseDown={(e) => { e.preventDefault(); toggleCommand(() => editor.chain().focus().toggleBold().run()); }}
                 className={`p-1.5 rounded hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors ${editor.isActive('bold') ? 'bg-slate-200 dark:bg-slate-700 text-indigo-600 dark:text-indigo-400' : 'text-slate-600 dark:text-slate-400'}`}
                 title="Bold"
             >
                 <Bold size={16} />
             </button>
             <button
-                onClick={() => toggleCommand(() => editor.chain().focus().toggleItalic().run())}
+                onMouseDown={(e) => { e.preventDefault(); toggleCommand(() => editor.chain().focus().toggleItalic().run()); }}
                 className={`p-1.5 rounded hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors ${editor.isActive('italic') ? 'bg-slate-200 dark:bg-slate-700 text-indigo-600 dark:text-indigo-400' : 'text-slate-600 dark:text-slate-400'}`}
                 title="Italic"
             >
                 <Italic size={16} />
             </button>
             <button
-                onClick={() => toggleCommand(() => editor.chain().focus().toggleStrike().run())}
+                onMouseDown={(e) => { e.preventDefault(); toggleCommand(() => editor.chain().focus().toggleStrike().run()); }}
                 className={`p-1.5 rounded hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors ${editor.isActive('strike') ? 'bg-slate-200 dark:bg-slate-700 text-indigo-600 dark:text-indigo-400' : 'text-slate-600 dark:text-slate-400'}`}
                 title="Strikethrough"
             >
@@ -129,14 +134,14 @@ const MenuBar = ({ editor, saveAsset }: { editor: any, saveAsset: (source: strin
             </button>
             <div className="w-px h-4 bg-slate-300 dark:bg-slate-600 mx-1" />
             <button
-                onClick={() => toggleCommand(() => editor.chain().focus().toggleHeading({ level: 1 }).run())}
+                onMouseDown={(e) => { e.preventDefault(); toggleCommand(() => editor.chain().focus().toggleHeading({ level: 1 }).run()); }}
                 className={`p-1.5 rounded hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors ${editor.isActive('heading', { level: 1 }) ? 'bg-slate-200 dark:bg-slate-700 text-indigo-600 dark:text-indigo-400' : 'text-slate-600 dark:text-slate-400'}`}
                 title="Heading 1"
             >
                 <Heading1 size={16} />
             </button>
             <button
-                onClick={() => toggleCommand(() => editor.chain().focus().toggleHeading({ level: 2 }).run())}
+                onMouseDown={(e) => { e.preventDefault(); toggleCommand(() => editor.chain().focus().toggleHeading({ level: 2 }).run()); }}
                 className={`p-1.5 rounded hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors ${editor.isActive('heading', { level: 2 }) ? 'bg-slate-200 dark:bg-slate-700 text-indigo-600 dark:text-indigo-400' : 'text-slate-600 dark:text-slate-400'}`}
                 title="Heading 2"
             >
@@ -144,21 +149,21 @@ const MenuBar = ({ editor, saveAsset }: { editor: any, saveAsset: (source: strin
             </button>
             <div className="w-px h-4 bg-slate-300 dark:bg-slate-600 mx-1" />
             <button
-                onClick={() => toggleCommand(() => editor.chain().focus().toggleBulletList().run())}
+                onMouseDown={(e) => { e.preventDefault(); toggleCommand(() => editor.chain().focus().toggleBulletList().run()); }}
                 className={`p-1.5 rounded hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors ${editor.isActive('bulletList') ? 'bg-slate-200 dark:bg-slate-700 text-indigo-600 dark:text-indigo-400' : 'text-slate-600 dark:text-slate-400'}`}
                 title="Bullet List"
             >
                 <List size={16} />
             </button>
             <button
-                onClick={() => toggleCommand(() => editor.chain().focus().toggleOrderedList().run())}
+                onMouseDown={(e) => { e.preventDefault(); toggleCommand(() => editor.chain().focus().toggleOrderedList().run()); }}
                 className={`p-1.5 rounded hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors ${editor.isActive('orderedList') ? 'bg-slate-200 dark:bg-slate-700 text-indigo-600 dark:text-indigo-400' : 'text-slate-600 dark:text-slate-400'}`}
                 title="Ordered List"
             >
                 <ListOrdered size={16} />
             </button>
             <button
-                onClick={() => toggleCommand(() => editor.chain().focus().toggleBlockquote().run())}
+                onMouseDown={(e) => { e.preventDefault(); toggleCommand(() => editor.chain().focus().toggleBlockquote().run()); }}
                 className={`p-1.5 rounded hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors ${editor.isActive('blockquote') ? 'bg-slate-200 dark:bg-slate-700 text-indigo-600 dark:text-indigo-400' : 'text-slate-600 dark:text-slate-400'}`}
                 title="Blockquote"
             >
@@ -169,7 +174,8 @@ const MenuBar = ({ editor, saveAsset }: { editor: any, saveAsset: (source: strin
             {/* Link Tools wrapped in a relative container */}
             <div className="relative flex items-center">
                 <button
-                    onClick={triggerLinkPrompt}
+                    onMouseDown={(e) => { e.preventDefault(); triggerLinkPrompt(); }}
+                    disabled={editor.state.selection.empty && !editor.isActive('link')}
                     className={`p-1.5 rounded transition-colors 
                         ${editor.isActive('link') ? 'bg-slate-200 dark:bg-slate-700 text-indigo-600 dark:text-indigo-400' : 'text-slate-600 dark:text-slate-400'}
                         ${(editor.state.selection.empty && !editor.isActive('link')) ? 'opacity-40 cursor-not-allowed' : 'hover:bg-slate-200 dark:hover:bg-slate-700 cursor-pointer'}
@@ -208,7 +214,7 @@ const MenuBar = ({ editor, saveAsset }: { editor: any, saveAsset: (source: strin
             </div>
 
             <button
-                onClick={addImage}
+                onMouseDown={(e) => { e.preventDefault(); addImage(); }}
                 className="p-1.5 rounded hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors text-slate-600 dark:text-slate-400"
                 title="Insert Image"
             >
@@ -229,15 +235,21 @@ export const EditorWrapper = ({ content, onChange }: EditorProps) => {
             Link.configure({
                 openOnClick: false,
                 autolink: true,
-                defaultProtocol: 'https'
+                defaultProtocol: 'https',
+                HTMLAttributes: {
+                    class: 'text-indigo-600 dark:text-indigo-400 underline decoration-indigo-300 dark:decoration-indigo-700 underline-offset-2 hover:text-indigo-800 dark:hover:text-indigo-300 transition-colors cursor-pointer',
+                }
             }),
         ],
         content: htmlContent,
         editorProps: {
             attributes: {
                 // Tailwind Typography styling applied directly to the Prosemirror canvas instance
-                class: 'prose prose-slate dark:prose-invert prose-indigo max-w-none focus:outline-none min-h-[500px] h-full',
+                class: 'prose prose-slate dark:prose-invert prose-indigo max-w-none focus:outline-none min-h-[500px] h-full marker:text-slate-400 dark:marker:text-slate-500 prose-p:my-4 prose-headings:my-6 prose-ul:list-disc prose-ol:list-decimal',
             },
+        },
+        parseOptions: {
+            preserveWhitespace: 'full',
         },
         onUpdate: ({ editor }) => {
             // Re-serialize the editor document back into markdown format so the user's hard drive stays plain text
