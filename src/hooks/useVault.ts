@@ -26,24 +26,30 @@ export function useVault() {
     const SYSTEM_DIR = `${VAULT_NAME}/.system`;
 
     const initVault = useCallback(async () => {
+        const ensureDir = async (dirPath: string) => {
+            try {
+                const dirExists = await exists(dirPath, { baseDir: BaseDirectory.Home });
+                if (!dirExists) {
+                    await mkdir(dirPath, { baseDir: BaseDirectory.Home, recursive: true });
+                }
+            } catch (e) {
+                console.error(`Error ensuring directory ${dirPath}`, e);
+            }
+        };
+
         try {
             setIsInitializing(true);
 
-            const vaultExists = await exists(VAULT_NAME, { baseDir: BaseDirectory.Home });
-            if (!vaultExists) {
-                console.log("Vault doesn't exist, creating directory structure...");
+            await ensureDir(VAULT_NAME);
+            await ensureDir(DRAFTS_DIR);
+            await ensureDir(PUBLISHED_DIR);
+            await ensureDir(ASSETS_DIR);
+            await ensureDir(SYSTEM_DIR);
 
-                // Create base vault
-                await mkdir(VAULT_NAME, { baseDir: BaseDirectory.Home, recursive: true });
-
-                // Create subdirectories
-                await mkdir(DRAFTS_DIR, { baseDir: BaseDirectory.Home, recursive: true });
-                await mkdir(PUBLISHED_DIR, { baseDir: BaseDirectory.Home, recursive: true });
-                await mkdir(ASSETS_DIR, { baseDir: BaseDirectory.Home, recursive: true });
-                await mkdir(SYSTEM_DIR, { baseDir: BaseDirectory.Home, recursive: true });
-
-                // Create a welcome post as the first draft
-                const welcomePath = await join(DRAFTS_DIR, 'Welcome.md');
+            // Create a welcome post if it doesn't exist
+            const welcomePath = await join(DRAFTS_DIR, 'Welcome.md');
+            const welcomeExists = await exists(welcomePath, { baseDir: BaseDirectory.Home });
+            if (!welcomeExists) {
                 await writeTextFile(
                     welcomePath,
                     "# Welcome to your new local-first blog!\n\nThis markdown file lives safely on your machine.",
@@ -110,6 +116,7 @@ export function useVault() {
             };
         } catch (error) {
             console.error("Failed to create new post", error);
+            alert("Failed to create post: " + String(error));
             return null;
         }
     }, [DRAFTS_DIR]);

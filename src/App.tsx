@@ -76,17 +76,17 @@ function App() {
         Custom Titlebar / Drag Region
         We place this absolute on top so the user can drag the frameless window 
       */}
-      <div className="absolute top-0 left-0 right-0 h-10 z-50 flex items-center justify-between px-4 pointer-events-none">
-        {/* The actual draggable background */}
-        <div data-tauri-drag-region className="w-full h-full absolute inset-0 z-0 pointer-events-auto"></div>
-
+      <div
+        className="absolute top-0 left-0 right-0 h-10 z-50 flex items-center justify-between px-4"
+        data-tauri-drag-region
+      >
         {/* Spacing for native macOS traffic lights (Overlay style places them here) */}
-        <div className="z-10 flex items-center gap-2">
+        <div className="z-10 flex items-center gap-2 no-drag">
           <div className="w-16"></div>
         </div>
 
         {/* Action Buttons top right */}
-        <div className="z-10 flex items-center gap-3 pointer-events-auto">
+        <div className="z-10 flex items-center gap-3 no-drag">
           <button
             onClick={() => setIsDarkMode(!isDarkMode)}
             className="p-1.5 rounded-md hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 transition-colors cursor-pointer"

@@ -15,25 +15,25 @@
   :root {
     --bg-color: #ffffff;
     --text-color: #1e293b;
-    /* slate-800 */
     --border-color: #e2e8f0;
-    /* slate-200 */
     --sidebar-bg: #f8fafc;
-    /* slate-50 */
   }
 
-  /* Optional native dark mode system toggle */
+  /* Support both OS-level dark mode and manual `.dark` class toggle */
   @media (prefers-color-scheme: dark) {
-    :root {
+    :root:not(.light) {
       --bg-color: #0f172a;
-      /* slate-900 */
       --text-color: #f8fafc;
-      /* slate-50 */
       --border-color: #1e293b;
-      /* slate-800 */
       --sidebar-bg: #1e293b;
-      /* slate-800 */
     }
+  }
+
+  :root.dark {
+    --bg-color: #0f172a;
+    --text-color: #f8fafc;
+    --border-color: #1e293b;
+    --sidebar-bg: #1e293b;
   }
 
   html,
