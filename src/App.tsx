@@ -27,6 +27,7 @@ function TreeNode({
   onSelectPost,
   expandedPaths,
   onToggleExpand,
+  onDeletePost,
 }: {
   node: VaultNode;
   depth: number;
