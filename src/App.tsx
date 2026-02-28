@@ -225,10 +225,23 @@ function VaultSetup({ onVaultSelected }: { onVaultSelected: (path: string) => vo
       });
 
       if (selected && typeof selected === "string") {
+        const { join } = await import('@tauri-apps/api/path');
+        const { exists, BaseDirectory } = await import('@tauri-apps/plugin-fs');
+
+        // Strip home dir prefix if selected path starts with it (for join to work relatively to Home)
         const homePath = home.endsWith('/') ? home.slice(0, -1) : home;
         const relativePath = selected.startsWith(homePath)
           ? selected.slice(homePath.length + 1)
           : selected;
+
+        const systemPath = await join(relativePath, '.system');
+        const isValid = await exists(systemPath, { baseDir: BaseDirectory.Home });
+
+        if (!isValid) {
+          const { message } = await import('@tauri-apps/plugin-dialog');
+          await message("The selected folder is not a valid Writizen vault.\n\nPlease select a folder that was previously created by Writizen.", { title: "Invalid Vault", kind: "error" });
+          return;
+        }
 
         onVaultSelected(relativePath);
       }
