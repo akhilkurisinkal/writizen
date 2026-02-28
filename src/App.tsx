@@ -478,6 +478,8 @@ function App() {
               <Settings size={16} />
             </button>
 
+
+
             <button
               onClick={handlePublish}
               disabled={!activePost || isPublishing}
@@ -553,6 +555,7 @@ function App() {
           onConfirm={executePublish}
         />
       )}
+
     </div>
   );
 }
