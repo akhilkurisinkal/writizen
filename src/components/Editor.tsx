@@ -248,9 +248,6 @@ export const EditorWrapper = ({ content, onChange }: EditorProps) => {
                 class: 'tiptap-canvas max-w-none focus:outline-none min-h-[500px] h-full',
             },
         },
-        parseOptions: {
-            preserveWhitespace: 'full',
-        },
         onUpdate: ({ editor }) => {
             // Re-serialize the editor document back into markdown format so the user's hard drive stays plain text
             const markdownOutput = defaultMarkdownSerializer.serialize(editor.state.doc);
