@@ -202,6 +202,12 @@ export function generateBlogHTML({ title, htmlContent, date, authorName, authorA
     .index-item {
       display: flex;
       flex-direction: column;
+      padding-bottom: 3rem;
+      border-bottom: 1px solid var(--border);
+    }
+    .index-item:last-child {
+      padding-bottom: 0;
+      border-bottom: none;
     }
     .index-date {
       color: var(--light-text);
