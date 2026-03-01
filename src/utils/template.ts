@@ -293,7 +293,7 @@ export function generateBlogHTML({ title, htmlContent, date, authorName, authorA
 </html>`;
 }
 
-export function generateIndexHTML(postLinks: { title: string, date: string, slug: string, excerpt?: string }[]): string {
+export function generateIndexHTML(postLinks: { title: string, date: string, slug: string, excerpt?: string }[], authorName?: string): string {
   const linksHtml = postLinks.map(post => `
     <li class="index-item">
       <time class="index-date">${post.date}</time>
@@ -312,6 +312,6 @@ export function generateIndexHTML(postLinks: { title: string, date: string, slug
         </ul>
       `,
     isIndex: true,
-    authorName: ""
+    authorName
   });
 }

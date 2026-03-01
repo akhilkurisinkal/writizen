@@ -88,7 +88,7 @@ export async function buildStaticSite(
     }
 
     // 4. Generate Index Page
-    const indexHtml = generateIndexHTML(postLinks);
+    const indexHtml = generateIndexHTML(postLinks, authorName);
     const indexPath = await join(outDir, 'index.html');
     await writeTextFile(indexPath, indexHtml);
 
