@@ -517,29 +517,7 @@ function App() {
           force: false
         });
       } catch (pushErr: any) {
-        const errorMsg = String(pushErr);
-        if (errorMsg.includes("contains commits that are not present locally") || errorMsg.includes("rejected the push")) {
-          const { ask } = await import('@tauri-apps/plugin-dialog');
-          const confirmed = await ask(
-            "The remote GitHub repository contains existing files that will be replaced by your blog.\n\nDo you want to force overwrite the remote repository?\n\n(This is normal when publishing to an existing repository for the first time).",
-            { title: "Overwrite Remote Repository?", kind: "warning" }
-          );
-
-          if (confirmed) {
-            await invoke('git_commit_and_push', {
-              path: absoluteOutPath,
-              repoUrl,
-              pat,
-              authorName,
-              authorEmail,
-              force: true
-            });
-          } else {
-            throw new Error("Publish canceled. The remote repository was not modified.");
-          }
-        } else {
-          throw pushErr;
-        }
+        throw pushErr;
       }
 
       refreshTree();

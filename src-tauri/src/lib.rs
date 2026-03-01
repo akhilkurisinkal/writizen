@@ -18,7 +18,7 @@ fn git_status(path: String) -> Result<bool, String> {
 }
 
 #[tauri::command]
-fn git_commit_and_push(path: String, repo_url: String, pat: String, author_name: String, author_email: String, force: bool) -> Result<String, String> {
+fn git_commit_and_push(path: String, repo_url: String, pat: String, author_name: String, author_email: String, _force: bool) -> Result<String, String> {
     let repo = match Repository::open(&path) {
         Ok(r) => r,
         Err(_) => {
@@ -28,61 +28,89 @@ fn git_commit_and_push(path: String, repo_url: String, pat: String, author_name:
         }
     };
 
-    // Stage changes (use "." to ensure hidden files like .github are staged)
+    // 1. Setup Remote
+    let mut remote = match repo.find_remote("origin") {
+        Ok(r) => r,
+        Err(_) => repo.remote("origin", &repo_url).map_err(|e| e.message().to_string())?,
+    };
+
+    if remote.url() != Some(&repo_url) {
+        repo.remote_set_url("origin", &repo_url).map_err(|e| e.message().to_string())?;
+        remote = repo.find_remote("origin").map_err(|e| e.message().to_string())?;
+    }
+
+    // 2. Setup Credentials
+    let mut callbacks = RemoteCallbacks::new();
+    let pat_clone = pat.clone();
+    callbacks.credentials(move |_url, username_from_url, _allowed_types| {
+        Cred::userpass_plaintext(username_from_url.unwrap_or("git"), &pat_clone)
+    });
+
+    // 3. Fetch Remote to find the current state
+    let mut fetch_opts = git2::FetchOptions::new();
+    fetch_opts.remote_callbacks(callbacks);
+    
+    // Determine branch name (default to main)
+    let branch_name = "main"; 
+    let remote_ref = format!("refs/remotes/origin/{}", branch_name);
+    
+    // Fetch might fail if repo is empty, which is okay
+    let _ = remote.fetch(&[branch_name], Some(&mut fetch_opts), None);
+
+    // 4. Find the remote parent commit (Tree Replacement Strategy)
+    let parent_commit = match repo.find_reference(&remote_ref) {
+        Ok(reference) => Some(reference.peel_to_commit().map_err(|e| e.message().to_string())?),
+        Err(_) => {
+            // If remote ref doesn't exist, check local HEAD for initial commit
+            match repo.head() {
+                Ok(head) => Some(head.peel_to_commit().map_err(|e| e.message().to_string())?),
+                Err(_) => None,
+            }
+        }
+    };
+
+    // 5. Stage changes
     let mut index = repo.index().map_err(|e| e.message().to_string())?;
     index.add_all(["."].iter(), git2::IndexAddOption::DEFAULT, None).map_err(|e| e.message().to_string())?;
     index.write().map_err(|e| e.message().to_string())?;
     
-    // Commit
+    // 6. Create Tree and Commit (Update Ref is None to avoid safety checks)
     let oid = index.write_tree().map_err(|e| e.message().to_string())?;
     let tree = repo.find_tree(oid).map_err(|e| e.message().to_string())?;
     
     let safe_name = if author_name.trim().is_empty() { "Writizen User" } else { &author_name };
     let safe_email = if author_email.trim().is_empty() { "user@writizen.local" } else { &author_email };
-    
     let signature = Signature::now(safe_name, safe_email).map_err(|e| e.message().to_string())?;
-    
-    let parent_commit = match repo.head() {
-        Ok(head) => Some(head.peel_to_commit().map_err(|e| e.message().to_string())?),
-        Err(_) => None,
-    };
     
     let mut parents = vec![];
     if let Some(ref parent) = parent_commit {
         parents.push(parent);
     }
     
-    // parents is Vec<&Commit>
-    repo.commit(
-        Some("HEAD"),
+    let commit_oid = repo.commit(
+        None, // Do NOT update HEAD/Ref automatically here
         &signature,
         &signature,
-        "Writizen publish: auto-commit",
+        "Writizen publish: auto-commit (tree-replacement)",
         &tree,
         &parents,
     ).map_err(|e| e.message().to_string())?;
+
+    // 7. Manually update the local branch reference and HEAD
+    let ref_name = format!("refs/heads/{}", branch_name);
+    repo.reference(&ref_name, commit_oid, true, "Writizen: update branch pointer")
+        .map_err(|e| e.message().to_string())?;
+    repo.set_head(&ref_name).map_err(|e| e.message().to_string())?;
     
-    // Push
-    let mut remote = match repo.find_remote("origin") {
-        Ok(r) => r,
-        Err(_) => repo.remote("origin", &repo_url).map_err(|e| e.message().to_string())?,
-    };
-    
-    // Ensure remote URL is updated if they changed it
-    if remote.url() != Some(&repo_url) {
-        repo.remote_set_url("origin", &repo_url).map_err(|e| e.message().to_string())?;
-        remote = repo.find_remote("origin").map_err(|e| e.message().to_string())?;
-    }
-        
-    let mut callbacks = RemoteCallbacks::new();
-    callbacks.credentials(move |_url, username_from_url, _allowed_types| {
-        // GitHub uses the PAT as the password, and username doesn't strictly matter for HTTPS PAT but "git" is standard
+    // 8. Push
+    let mut push_callbacks = RemoteCallbacks::new();
+    push_callbacks.credentials(move |_url, username_from_url, _allowed_types| {
         Cred::userpass_plaintext(username_from_url.unwrap_or("git"), &pat)
     });
-    
+
     let rejection_msg = std::sync::Arc::new(std::sync::Mutex::new(None));
     let rejection_clone = std::sync::Arc::clone(&rejection_msg);
-    callbacks.push_update_reference(move |_refname, status| {
+    push_callbacks.push_update_reference(move |_refname, status| {
         if let Some(error_msg) = status {
             let mut lock = rejection_clone.lock().unwrap();
             *lock = Some(error_msg.to_string());
@@ -91,20 +119,9 @@ fn git_commit_and_push(path: String, repo_url: String, pat: String, author_name:
     });
     
     let mut push_opts = PushOptions::new();
-    push_opts.remote_callbacks(callbacks);
+    push_opts.remote_callbacks(push_callbacks);
     
-    // Default to pushing the main branch if HEAD isn't available
-    let branch_name = match repo.head() {
-        Ok(head) => head.name().unwrap_or("refs/heads/main").to_string(),
-        Err(_) => "refs/heads/main".to_string(),
-    };
-    // Include '+' prefix for force push if requested
-    let refspec = if force {
-        format!("+{}:{}", branch_name, branch_name)
-    } else {
-        format!("{}:{}", branch_name, branch_name)
-    };
-    
+    let refspec = format!("{}:{}", ref_name, ref_name);
     remote.push(&[&refspec], Some(&mut push_opts)).map_err(|e| e.message().to_string())?;
     
     let locked_rejection = rejection_msg.lock().unwrap();
