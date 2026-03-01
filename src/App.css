@@ -37,11 +37,13 @@
   }
 
   html,
-  body {
+  body,
+  #root {
     @apply h-full w-full bg-[var(--bg-color)] text-[var(--text-color)] overflow-hidden;
     /* Prevent text selection and context menus by default */
     user-select: none;
     -webkit-user-select: none;
+    height: 100%;
   }
 }
 
@@ -49,8 +51,8 @@
 body {
   margin: 0;
   padding: 0;
-  width: 100vw;
-  height: 100vh;
+  width: 100%;
+  height: 100%;
   overflow: hidden;
   /* Prevent body scroll, handle scroll in React */
   background-color: var(--bg-color);

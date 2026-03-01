@@ -251,7 +251,7 @@ function VaultSetup({ onVaultSelected }: { onVaultSelected: (path: string) => vo
   };
 
   return (
-    <div className="flex items-center justify-center h-screen w-full bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900">
+    <div className="flex items-center justify-center h-full w-full bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900">
       <div className="text-center max-w-md px-8 w-full relative -mt-16">
         {/* Logo */}
         <div className="w-20 h-20 bg-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-lg shadow-indigo-600/20">
@@ -528,7 +528,7 @@ function App() {
   }
 
   return (
-    <div className="flex h-screen w-full bg-[var(--bg-color)] text-[var(--text-color)] antialiased selection:bg-indigo-500/30 overflow-hidden">
+    <div className="flex h-full w-full bg-[var(--bg-color)] text-[var(--text-color)] antialiased selection:bg-indigo-500/30 overflow-hidden">
       {/* In-App Error / Success Toasts */}
       {vaultError && (
         <div className="absolute bottom-4 right-4 bg-red-50 dark:bg-red-900 border-l-4 border-red-500 text-red-700 dark:text-red-200 p-4 rounded-md shadow-xl z-50 max-w-sm pointer-events-auto">
