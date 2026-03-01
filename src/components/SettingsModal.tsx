@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { BarChart2, MessageSquare, X, Check, Server } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
+import { homeDir } from '@tauri-apps/api/path';
 import clsx from 'clsx';
 
 interface SettingsModalProps {
@@ -19,8 +20,6 @@ export function SettingsModal({ isOpen, onClose, vaultPath }: SettingsModalProps
 
     // Comments State
     const [enableComments, setEnableComments] = useState(false);
-    const [commentProvider, setCommentProvider] = useState<'disqus' | 'giscus'>('giscus');
-    const [disqusShortname, setDisqusShortname] = useState('');
     const [giscusRepo, setGiscusRepo] = useState('');
     const [giscusRepoId, setGiscusRepoId] = useState('');
     const [giscusCategory, setGiscusCategory] = useState('');
@@ -35,9 +34,16 @@ export function SettingsModal({ isOpen, onClose, vaultPath }: SettingsModalProps
         }
     }, [isOpen, vaultPath]);
 
+    const getAbsolutePath = async (path: string) => {
+        if (path.startsWith('/') || path.startsWith('C:\\')) return path;
+        const home = await homeDir();
+        return `${home.replace(/\/$/, '')}/${path}`;
+    };
+
     const loadConfig = async () => {
         try {
-            const configStr: string = await invoke('get_config', { vaultPath });
+            const absolutePath = await getAbsolutePath(vaultPath);
+            const configStr: string = await invoke('get_config', { vaultPath: absolutePath });
             const config = JSON.parse(configStr);
 
             if (config.analytics) {
@@ -48,8 +54,6 @@ export function SettingsModal({ isOpen, onClose, vaultPath }: SettingsModalProps
 
             if (config.comments) {
                 setEnableComments(config.comments.enabled || false);
-                setCommentProvider(config.comments.provider || 'giscus');
-                setDisqusShortname(config.comments.disqusShortname || '');
                 setGiscusRepo(config.comments.giscusRepo || '');
                 setGiscusRepoId(config.comments.giscusRepoId || '');
                 setGiscusCategory(config.comments.giscusCategory || '');
@@ -71,8 +75,7 @@ export function SettingsModal({ isOpen, onClose, vaultPath }: SettingsModalProps
                 },
                 comments: {
                     enabled: enableComments,
-                    provider: commentProvider,
-                    disqusShortname,
+                    provider: 'giscus',
                     giscusRepo,
                     giscusRepoId,
                     giscusCategory,
@@ -80,8 +83,9 @@ export function SettingsModal({ isOpen, onClose, vaultPath }: SettingsModalProps
                 }
             };
 
+            const absolutePath = await getAbsolutePath(vaultPath);
             await invoke('save_config', {
-                vaultPath,
+                vaultPath: absolutePath,
                 config: JSON.stringify(config, null, 2)
             });
 
@@ -222,97 +226,51 @@ export function SettingsModal({ isOpen, onClose, vaultPath }: SettingsModalProps
                                     </label>
 
                                     {enableComments && (
-                                        <div className="space-y-5 pt-2 animate-in fade-in duration-300">
+                                        <div className="space-y-4 bg-slate-50/50 dark:bg-slate-900/50 p-4 rounded-xl border border-slate-100 dark:border-slate-800 animate-in fade-in duration-300">
                                             <div>
-                                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                                                    Provider
+                                                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5 uppercase tracking-wider">
+                                                    Repo (user/repo)
                                                 </label>
-                                                <div className="grid grid-cols-2 gap-3">
-                                                    <button
-                                                        onClick={() => setCommentProvider('giscus')}
-                                                        className={clsx(
-                                                            "px-3 py-2 border rounded-lg text-sm font-medium transition-all text-center",
-                                                            commentProvider === 'giscus'
-                                                                ? "border-indigo-500 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-300"
-                                                                : "border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-700"
-                                                        )}
-                                                    >
-                                                        Giscus (GitHub)
-                                                    </button>
-                                                    <button
-                                                        onClick={() => setCommentProvider('disqus')}
-                                                        className={clsx(
-                                                            "px-3 py-2 border rounded-lg text-sm font-medium transition-all text-center",
-                                                            commentProvider === 'disqus'
-                                                                ? "border-indigo-500 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-300"
-                                                                : "border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-700"
-                                                        )}
-                                                    >
-                                                        Disqus
-                                                    </button>
-                                                </div>
+                                                <input
+                                                    type="text"
+                                                    value={giscusRepo}
+                                                    onChange={(e) => setGiscusRepo(e.target.value)}
+                                                    className="w-full bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                                                />
                                             </div>
-
-                                            {commentProvider === 'giscus' ? (
-                                                <div className="space-y-4 bg-slate-50/50 dark:bg-slate-900/50 p-4 rounded-xl border border-slate-100 dark:border-slate-800">
-                                                    <div>
-                                                        <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5 uppercase tracking-wider">
-                                                            Repo (user/repo)
-                                                        </label>
-                                                        <input
-                                                            type="text"
-                                                            value={giscusRepo}
-                                                            onChange={(e) => setGiscusRepo(e.target.value)}
-                                                            className="w-full bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
-                                                        />
-                                                    </div>
-                                                    <div>
-                                                        <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5 uppercase tracking-wider">
-                                                            Repo ID
-                                                        </label>
-                                                        <input
-                                                            type="text"
-                                                            value={giscusRepoId}
-                                                            onChange={(e) => setGiscusRepoId(e.target.value)}
-                                                            className="w-full bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
-                                                        />
-                                                    </div>
-                                                    <div>
-                                                        <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5 uppercase tracking-wider">
-                                                            Category
-                                                        </label>
-                                                        <input
-                                                            type="text"
-                                                            value={giscusCategory}
-                                                            onChange={(e) => setGiscusCategory(e.target.value)}
-                                                            className="w-full bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
-                                                        />
-                                                    </div>
-                                                    <div>
-                                                        <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5 uppercase tracking-wider">
-                                                            Category ID
-                                                        </label>
-                                                        <input
-                                                            type="text"
-                                                            value={giscusCategoryId}
-                                                            onChange={(e) => setGiscusCategoryId(e.target.value)}
-                                                            className="w-full bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
-                                                        />
-                                                    </div>
-                                                </div>
-                                            ) : (
-                                                <div className="bg-slate-50/50 dark:bg-slate-900/50 p-4 rounded-xl border border-slate-100 dark:border-slate-800">
-                                                    <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5 uppercase tracking-wider">
-                                                        Disqus Shortname
-                                                    </label>
-                                                    <input
-                                                        type="text"
-                                                        value={disqusShortname}
-                                                        onChange={(e) => setDisqusShortname(e.target.value)}
-                                                        className="w-full bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
-                                                    />
-                                                </div>
-                                            )}
+                                            <div>
+                                                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5 uppercase tracking-wider">
+                                                    Repo ID
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    value={giscusRepoId}
+                                                    onChange={(e) => setGiscusRepoId(e.target.value)}
+                                                    className="w-full bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5 uppercase tracking-wider">
+                                                    Category
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    value={giscusCategory}
+                                                    onChange={(e) => setGiscusCategory(e.target.value)}
+                                                    className="w-full bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-xs font-semibold text-slate-600 dark:text-slate-400 mb-1.5 uppercase tracking-wider">
+                                                    Category ID
+                                                </label>
+                                                <input
+                                                    type="text"
+                                                    value={giscusCategoryId}
+                                                    onChange={(e) => setGiscusCategoryId(e.target.value)}
+                                                    className="w-full bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500/50"
+                                                />
+                                            </div>
                                         </div>
                                     )}
                                 </div>

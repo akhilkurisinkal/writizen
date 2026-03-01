@@ -1,7 +1,8 @@
 import { readDir, readTextFile, writeTextFile, mkdir, exists, copyFile } from '@tauri-apps/plugin-fs';
 import { join } from '@tauri-apps/api/path';
+import { invoke } from '@tauri-apps/api/core';
 import { marked } from 'marked';
-import { generateBlogHTML, generateIndexHTML } from './template';
+import { generateBlogHTML, generateIndexHTML, type BlogHTMLOptions } from './template';
 import { parseFrontmatter, slugify } from './markdown';
 
 export async function buildStaticSite(
@@ -15,6 +16,29 @@ export async function buildStaticSite(
     const outDir = await join(vaultPath, 'public_html');
     const assetsDir = await join(vaultPath, 'assets');
     const outAssetsDir = await join(outDir, 'assets');
+
+    // Load configuration for Analytics/Comments
+    let googleAnalyticsId = '';
+    let giscusConfig: BlogHTMLOptions['giscusConfig'] = undefined;
+    try {
+      const configStr: string = await invoke('get_config', { vaultPath });
+      const config = JSON.parse(configStr);
+
+      if (config.analytics && config.analytics.googleAnalyticsId) {
+        googleAnalyticsId = config.analytics.googleAnalyticsId;
+      }
+
+      if (config.comments && config.comments.enabled && config.comments.provider === 'giscus') {
+        giscusConfig = {
+          repo: config.comments.giscusRepo,
+          repoId: config.comments.giscusRepoId,
+          category: config.comments.giscusCategory,
+          categoryId: config.comments.giscusCategoryId
+        };
+      }
+    } catch (e) {
+      console.warn("Could not load vault config, proceeding without GA/Comments", e);
+    }
 
     // 1. Create/Ensure out directories exist
     if (!(await exists(outDir))) {
@@ -67,7 +91,9 @@ export async function buildStaticSite(
         title,
         htmlContent,
         date,
-        authorName
+        authorName,
+        googleAnalyticsId,
+        giscusConfig
       });
 
       // Write to out/posts folder
@@ -86,7 +112,7 @@ export async function buildStaticSite(
     }
 
     // 4. Generate Index Page
-    const indexHtml = generateIndexHTML(postLinks, authorName);
+    const indexHtml = generateIndexHTML(postLinks, authorName, googleAnalyticsId);
     const indexPath = await join(outDir, 'index.html');
     await writeTextFile(indexPath, indexHtml);
 

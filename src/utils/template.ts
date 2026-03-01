@@ -1,12 +1,19 @@
-interface BlogHTMLOptions {
+export interface BlogHTMLOptions {
   title: string;
   htmlContent: string;
   date?: string;
   authorName?: string;
   isIndex?: boolean;
+  googleAnalyticsId?: string;
+  giscusConfig?: {
+    repo: string;
+    repoId: string;
+    category: string;
+    categoryId: string;
+  };
 }
 
-export function generateBlogHTML({ title, htmlContent, date, authorName, isIndex = false }: BlogHTMLOptions): string {
+export function generateBlogHTML({ title, htmlContent, date, authorName, isIndex = false, googleAnalyticsId, giscusConfig }: BlogHTMLOptions): string {
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -51,7 +58,14 @@ export function generateBlogHTML({ title, htmlContent, date, authorName, isIndex
 
     /* Header styling */
     header {
-      padding: 2.5rem 1.5rem 1.5rem;
+      border-bottom: 1px solid var(--border);
+      background-color: var(--bg);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .header-content {
+      padding: 1rem 1.5rem;
       max-width: 680px;
       margin: 0 auto;
       display: flex;
@@ -87,7 +101,7 @@ export function generateBlogHTML({ title, htmlContent, date, authorName, isIndex
 
     /* Main Content */
     main {
-      padding: 3rem 1.5rem 5rem;
+      padding: 2.5rem 1.5rem 5rem;
       max-width: 680px;
       margin: 0 auto;
     }
@@ -101,7 +115,7 @@ export function generateBlogHTML({ title, htmlContent, date, authorName, isIndex
       display: inline-flex;
       align-items: center;
       gap: 0.4rem;
-      margin-bottom: 2.5rem;
+      margin-bottom: 1.5rem;
       color: var(--light-text);
       font-size: 0.85rem;
       font-weight: 500;
@@ -245,17 +259,29 @@ export function generateBlogHTML({ title, htmlContent, date, authorName, isIndex
       margin: 0 auto;
     }
   </style>
+  ${googleAnalyticsId ? `
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=${googleAnalyticsId}"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', '${googleAnalyticsId}');
+  </script>
+  ` : ''}
 </head>
 <body>
   <header>
-    <a href="${isIndex ? '#' : '../index.html'}" class="header-logo">
-      ${authorName ? authorName + ' Blog' : 'My Blog'}
-    </a>
-    <div class="header-nav">
-      <a href="#" class="nav-link">About</a>
-      <a href="${isIndex ? 'rss.xml' : '../rss.xml'}" class="rss-icon" aria-label="RSS Feed" title="RSS Feed">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11a9 9 0 0 1 9 9"/><path d="M4 4a16 16 0 0 1 16 16"/><circle cx="5" cy="19" r="1"/></svg>
+    <div class="header-content">
+      <a href="${isIndex ? '#' : '../index.html'}" class="header-logo">
+        ${authorName ? authorName + ' Blog' : 'My Blog'}
       </a>
+      <div class="header-nav">
+        <a href="#" class="nav-link">About</a>
+        <a href="${isIndex ? 'rss.xml' : '../rss.xml'}" class="rss-icon" aria-label="RSS Feed" title="RSS Feed">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11a9 9 0 0 1 9 9"/><path d="M4 4a16 16 0 0 1 16 16"/><circle cx="5" cy="19" r="1"/></svg>
+        </a>
+      </div>
     </div>
   </header>
   
@@ -275,6 +301,26 @@ export function generateBlogHTML({ title, htmlContent, date, authorName, isIndex
     <article>
       ${htmlContent}
     </article>
+
+    ${!isIndex && giscusConfig && giscusConfig.repo ? `
+      <div style="margin-top: 5rem; padding-top: 3rem; border-top: 1px solid var(--border);">
+        <script src="https://giscus.app/client.js"
+                data-repo="${giscusConfig.repo}"
+                data-repo-id="${giscusConfig.repoId}"
+                data-category="${giscusConfig.category}"
+                data-category-id="${giscusConfig.categoryId}"
+                data-mapping="pathname"
+                data-strict="0"
+                data-reactions-enabled="1"
+                data-emit-metadata="0"
+                data-input-position="bottom"
+                data-theme="preferred_color_scheme"
+                data-lang="en"
+                crossorigin="anonymous"
+                async>
+        </script>
+      </div>
+    ` : ''}
   </main>
 
   <footer>
@@ -284,7 +330,11 @@ export function generateBlogHTML({ title, htmlContent, date, authorName, isIndex
 </html>`;
 }
 
-export function generateIndexHTML(postLinks: { title: string, date: string, slug: string, excerpt?: string }[], authorName?: string): string {
+export function generateIndexHTML(
+  postLinks: { title: string, date: string, slug: string, excerpt?: string }[],
+  authorName?: string,
+  googleAnalyticsId?: string
+): string {
   const linksHtml = postLinks.map(post => `
     <li class="index-item">
       <time class="index-date">${post.date}</time>
@@ -303,6 +353,7 @@ export function generateIndexHTML(postLinks: { title: string, date: string, slug
         </ul>
       `,
     isIndex: true,
-    authorName
+    authorName,
+    googleAnalyticsId
   });
 }
