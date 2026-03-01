@@ -4,7 +4,12 @@ import { marked } from 'marked';
 import { generateBlogHTML, generateIndexHTML } from './template';
 import { parseFrontmatter, slugify } from './markdown';
 
-export async function buildStaticSite(vaultPath: string, customDomain?: string): Promise<string> {
+export async function buildStaticSite(
+  vaultPath: string,
+  customDomain?: string,
+  authorName?: string,
+  authorAvatar?: string
+): Promise<string> {
   try {
     const { remove } = await import('@tauri-apps/plugin-fs');
     const postsDir = await join(vaultPath, 'posts');
@@ -49,13 +54,19 @@ export async function buildStaticSite(vaultPath: string, customDomain?: string):
       }
 
       const title = meta.title || file.name.replace('.md', '');
-      const date = meta.date || new Date().toLocaleDateString();
+      const date = meta.date || new Date().toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
 
       // Convert Markdown to HTML
       const htmlContent = await marked.parse(body);
 
       // Generate full HTML page
-      const fullHtml = generateBlogHTML(title, htmlContent);
+      const fullHtml = generateBlogHTML({
+        title,
+        htmlContent,
+        date,
+        authorName,
+        authorAvatar
+      });
 
       // Write to out/posts folder
       const fallbackSlug = slugify(file.name.replace('.md', ''));

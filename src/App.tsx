@@ -498,7 +498,11 @@ function App() {
 
       // 2. Build the HTML Static Site using the absolute path
       const { buildStaticSite } = await import('./utils/buildSite');
-      await buildStaticSite(absoluteVaultPath, customDomain);
+
+      // Use a clean, generic user avatar for the blog posts
+      const authorAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(authorName)}&background=4f46e5&color=fff&rounded=true&bold=true`;
+
+      await buildStaticSite(absoluteVaultPath, customDomain, authorName, authorAvatar);
 
       // 3. Resolve absolute path of the 'public_html' directory
       const absoluteOutPath = `${absoluteVaultPath}/public_html`;
