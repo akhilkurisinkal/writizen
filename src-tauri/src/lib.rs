@@ -115,6 +115,36 @@ fn git_commit_and_push(path: String, repo_url: String, pat: String, author_name:
     Ok("Success".to_string())
 }
 
+#[tauri::command]
+fn get_config(vault_path: String) -> Result<String, String> {
+    let mut config_path = std::path::PathBuf::from(&vault_path);
+    config_path.push(".system");
+    config_path.push("config.json");
+
+    if !config_path.exists() {
+        return Ok("{}".to_string());
+    }
+
+    std::fs::read_to_string(config_path).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn save_config(vault_path: String, config: String) -> Result<String, String> {
+    let mut system_dir = std::path::PathBuf::from(&vault_path);
+    system_dir.push(".system");
+
+    if !system_dir.exists() {
+        std::fs::create_dir_all(&system_dir).map_err(|e| e.to_string())?;
+    }
+
+    let mut config_path = system_dir.clone();
+    config_path.push("config.json");
+
+    std::fs::write(config_path, config).map_err(|e| e.to_string())?;
+    
+    Ok("Saved".to_string())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -125,7 +155,9 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             git_init,
             git_status,
-            git_commit_and_push
+            git_commit_and_push,
+            get_config,
+            save_config
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
