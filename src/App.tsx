@@ -1,8 +1,12 @@
 import { useState, useEffect } from "react";
 import { FileText, FolderClosed, FolderOpen, Plus, Sun, Moon, Send, Loader2, ChevronRight, FolderPlus, LogOut, Settings, Trash2, Edit2, Server } from "lucide-react";
 import clsx from "clsx";
-import { open } from "@tauri-apps/plugin-dialog";
+import { ask, message, open } from "@tauri-apps/plugin-dialog";
+import { invoke } from "@tauri-apps/api/core";
 import { homeDir } from "@tauri-apps/api/path";
+import { join } from "@tauri-apps/api/path";
+import { BaseDirectory, exists } from "@tauri-apps/plugin-fs";
+import { load } from "@tauri-apps/plugin-store";
 import Editor from "./components/Editor";
 import PublishSettingsDialog from "./components/PublishSettingsDialog";
 import { useVault, Post, VaultNode } from "./hooks/useVault";
@@ -226,9 +230,6 @@ function VaultSetup({ onVaultSelected }: { onVaultSelected: (path: string) => vo
       });
 
       if (selected && typeof selected === "string") {
-        const { join } = await import('@tauri-apps/api/path');
-        const { exists, BaseDirectory } = await import('@tauri-apps/plugin-fs');
-
         // Strip home dir prefix if selected path starts with it (for join to work relatively to Home)
         const homePath = home.endsWith('/') ? home.slice(0, -1) : home;
         const relativePath = selected.startsWith(homePath)
@@ -239,7 +240,6 @@ function VaultSetup({ onVaultSelected }: { onVaultSelected: (path: string) => vo
         const isValid = await exists(postsPath, { baseDir: BaseDirectory.Home });
 
         if (!isValid) {
-          const { message } = await import('@tauri-apps/plugin-dialog');
           await message("The selected folder is not a valid Writizen vault.\n\nPlease select a folder that contains a 'posts' directory.", { title: "Invalid Vault", kind: "error" });
           return;
         }
@@ -328,7 +328,7 @@ function App() {
   const [homeDirPath, setHomeDirPath] = useState<string>("");
 
   useEffect(() => {
-    import("@tauri-apps/api/path").then(m => m.homeDir().then(setHomeDirPath));
+    homeDir().then(setHomeDirPath);
   }, []);
 
   const { isInitializing, vaultError, setVaultError, initVault, getVaultTree, readPost, savePost, createPost, deletePost, renamePost } = useVault(vaultPath);
@@ -405,7 +405,6 @@ function App() {
   };
 
   const handleDeletePost = async (post: Post) => {
-    const { ask } = await import('@tauri-apps/plugin-dialog');
     const confirmed = await ask(`Are you sure you want to delete "${post.name}"?\nThis action cannot be undone.`, {
       title: 'Delete Post',
       kind: 'warning',
@@ -458,7 +457,6 @@ function App() {
   const handlePublish = async () => {
     try {
       if (!vaultPath) return;
-      const { load } = await import('@tauri-apps/plugin-store');
       const store = await load('settings.json');
       const repoUrl = await store.get<string>('github_repo_url');
       const pat = await store.get<string>('github_pat');
@@ -479,7 +477,6 @@ function App() {
       setIsPublishConfirmOpen(false);
       setIsPublishing(true);
 
-      const { load } = await import('@tauri-apps/plugin-store');
       const store = await load('settings.json');
       const repoUrl = await store.get<string>('github_repo_url');
       const pat = await store.get<string>('github_pat');
@@ -490,7 +487,6 @@ function App() {
       if (!repoUrl || !pat || !vaultPath) return;
 
       // 1. Resolve absolute path of the local vault
-      const { homeDir } = await import('@tauri-apps/api/path');
       const home = await homeDir();
       const absoluteVaultPath = vaultPath.startsWith('/')
         ? vaultPath
@@ -505,8 +501,6 @@ function App() {
       const absoluteOutPath = `${absoluteVaultPath}/public_html`;
 
       // 4. Push *only* the 'public_html' directory to GitHub
-      const { invoke } = await import('@tauri-apps/api/core');
-
       try {
         await invoke('git_commit_and_push', {
           path: absoluteOutPath,
