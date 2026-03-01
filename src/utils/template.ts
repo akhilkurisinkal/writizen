@@ -220,14 +220,14 @@ export function generateBlogHTML({ title, htmlContent, date, authorName, authorA
       margin: 0;
       font-size: 1.5rem;
       font-weight: 700;
-      color: var(--text);
+      color: var(--link-hover);
       line-height: 1.3;
       letter-spacing: -0.02em;
-      transition: color 0.2s;
+      transition: opacity 0.2s ease;
       text-decoration: none;
     }
     .index-link:hover .index-title {
-      color: var(--link-hover);
+      opacity: 0.8;
       text-decoration: none;
     }
     .index-excerpt {
