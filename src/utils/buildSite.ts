@@ -128,41 +128,41 @@ ${rssItems}
     }
 
     const deployYml = `
-    name: Deploy static content to Pages
+name: Deploy static content to Pages
 
-    on:
-    push:
+on:
+  push:
     branches: ["main"]
-    workflow_dispatch:
+  workflow_dispatch:
 
-    permissions:
-    contents: read
-    pages: write
-    id - token: write
+permissions:
+  contents: read
+  pages: write
+  id-token: write
 
-    concurrency:
-    group: "pages"
-    cancel -in -progress: false
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
 
-    jobs:
-    deploy:
+jobs:
+  deploy:
     environment:
-    name: github - pages
-    url: \${ { steps.deployment.outputs.page_url } }
-    runs - on: ubuntu - latest
+      name: github-pages
+      url: \${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
     steps:
-    - name: Checkout
-    uses: actions / checkout@v4
-    - name: Setup Pages
-    uses: actions / configure - pages@v5
-    - name: Upload artifact
-    uses: actions / upload - pages - artifact@v3
-    with:
-    path: '.'
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: '.'
       - name: Deploy to GitHub Pages
-    id: deployment
-    uses: actions / deploy - pages@v4
-      `;
+        id: deployment
+        uses: actions/deploy-pages@v4
+`;
     const deployYmlPath = await join(githubWorkflowsDir, 'deploy.yml');
     await writeTextFile(deployYmlPath, deployYml.trim());
 
