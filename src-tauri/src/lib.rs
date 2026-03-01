@@ -98,9 +98,8 @@ fn git_commit_and_push(path: String, repo_url: String, pat: String, author_name:
         Ok(head) => head.name().unwrap_or("refs/heads/main").to_string(),
         Err(_) => "refs/heads/main".to_string(),
     };
-    // The '+' prefix enforces a force push, overwriting the remote if necessary.
-    // This ensures Writizen's local file state is always the absolute source of truth.
-    let refspec = format!("+{}:{}", branch_name, branch_name);
+    // Push without force by default to avoid rewriting remote history unexpectedly.
+    let refspec = format!("{}:{}", branch_name, branch_name);
     
     remote.push(&[&refspec], Some(&mut push_opts)).map_err(|e| e.message().to_string())?;
     

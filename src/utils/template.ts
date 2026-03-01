@@ -107,7 +107,7 @@ export function generateBlogHTML(title: string, htmlContent: string): string {
 </head>
 <body>
   <header>
-    <h1><a href="/">My Blog</a></h1>
+    <h1><a href="../index.html">My Blog</a></h1>
   </header>
   <main>
     <article>
