@@ -15,7 +15,7 @@
       "identifier": "fs:allow-read",
       "allow": [
         {
-          "path": "**"
+          "path": "$HOME/**"
         },
         {
           "path": "**/.github/**"
@@ -26,7 +26,7 @@
       "identifier": "fs:allow-write",
       "allow": [
         {
-          "path": "**"
+          "path": "$HOME/**"
         },
         {
           "path": "**/.github/**"
@@ -37,7 +37,7 @@
       "identifier": "fs:allow-mkdir",
       "allow": [
         {
-          "path": "**"
+          "path": "$HOME/**"
         },
         {
           "path": "**/.github/**"
@@ -48,7 +48,7 @@
       "identifier": "fs:allow-remove",
       "allow": [
         {
-          "path": "**"
+          "path": "$HOME/**"
         },
         {
           "path": "**/.github/**"
@@ -59,7 +59,7 @@
       "identifier": "fs:allow-read-dir",
       "allow": [
         {
-          "path": "**"
+          "path": "$HOME/**"
         },
         {
           "path": "**/.github/**"
@@ -70,7 +70,7 @@
       "identifier": "fs:allow-exists",
       "allow": [
         {
-          "path": "**"
+          "path": "$HOME/**"
         },
         {
           "path": "**/.github/**"
@@ -81,7 +81,7 @@
       "identifier": "fs:allow-write-text-file",
       "allow": [
         {
-          "path": "**"
+          "path": "$HOME/**"
         },
         {
           "path": "**/.github/**"
@@ -92,7 +92,7 @@
       "identifier": "fs:allow-read-text-file",
       "allow": [
         {
-          "path": "**"
+          "path": "$HOME/**"
         },
         {
           "path": "**/.github/**"
@@ -103,7 +103,7 @@
       "identifier": "fs:allow-copy-file",
       "allow": [
         {
-          "path": "**"
+          "path": "$HOME/**"
         },
         {
           "path": "**/.github/**"
@@ -114,7 +114,7 @@
       "identifier": "fs:allow-read-file",
       "allow": [
         {
-          "path": "**"
+          "path": "$HOME/**"
         },
         {
           "path": "**/.github/**"
@@ -125,7 +125,7 @@
       "identifier": "fs:allow-rename",
       "allow": [
         {
-          "path": "**"
+          "path": "$HOME/**"
         },
         {
           "path": "**/.github/**"
@@ -136,7 +136,7 @@
       "identifier": "fs:allow-write-file",
       "allow": [
         {
-          "path": "**"
+          "path": "$HOME/**"
         },
         {
           "path": "**/.github/**"

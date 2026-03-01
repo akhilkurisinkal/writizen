@@ -2,10 +2,11 @@ import { readDir, readTextFile, writeTextFile, mkdir, exists, copyFile } from '@
 import { join } from '@tauri-apps/api/path';
 import { marked } from 'marked';
 import { generateBlogHTML, generateIndexHTML } from './template';
-import { parseFrontmatter } from './markdown';
+import { parseFrontmatter, slugify } from './markdown';
 
 export async function buildStaticSite(vaultPath: string, customDomain?: string): Promise<string> {
   try {
+    const { remove } = await import('@tauri-apps/plugin-fs');
     const postsDir = await join(vaultPath, 'posts');
     const outDir = await join(vaultPath, 'out');
     const assetsDir = await join(vaultPath, 'assets');
@@ -16,8 +17,13 @@ export async function buildStaticSite(vaultPath: string, customDomain?: string):
       await mkdir(outDir, { recursive: true });
     }
     const outPostsDir = await join(outDir, 'posts');
-    if (!(await exists(outPostsDir))) {
-      await mkdir(outPostsDir, { recursive: true });
+    if (await exists(outPostsDir)) {
+      await remove(outPostsDir, { recursive: true });
+    }
+    await mkdir(outPostsDir, { recursive: true });
+
+    if (await exists(outAssetsDir)) {
+      await remove(outAssetsDir, { recursive: true });
     }
 
     // 2. Read all markdown files
@@ -52,7 +58,9 @@ export async function buildStaticSite(vaultPath: string, customDomain?: string):
       const fullHtml = generateBlogHTML(title, htmlContent);
 
       // Write to out/posts folder
-      const slug = file.name.replace('.md', '.html');
+      const fallbackSlug = slugify(file.name.replace('.md', ''));
+      const normalizedSlug = slugify(meta.slug) || fallbackSlug;
+      const slug = `${normalizedSlug}.html`;
       const outPath = await join(outPostsDir, slug);
       await writeTextFile(outPath, fullHtml);
 

@@ -61,7 +61,7 @@ function TreeNode({
         <button
           onClick={() => onToggleExpand(node.path)}
           className="w-full flex items-center gap-1.5 py-1 text-sm rounded-md transition-colors text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
-          style={{ paddingLeft: `${depth * 14 + 6} px`, paddingRight: '6px' }}
+          style={{ paddingLeft: `${depth * 14 + 6}px`, paddingRight: '6px' }}
         >
           <ChevronRight
             size={12}
@@ -122,7 +122,7 @@ function TreeNode({
             ? "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
             : "text-slate-400 dark:text-slate-500 cursor-default"
       )}
-      style={{ paddingLeft: `${depth * 14 + 6 + 14} px`, paddingRight: '6px' }}
+      style={{ paddingLeft: `${depth * 14 + 6 + 14}px`, paddingRight: '6px' }}
       disabled={!isMd}
     >
       <div className="flex items-center gap-1.5 min-w-0 pr-1 w-full truncate">
@@ -623,7 +623,7 @@ function App() {
 
             <button
               onClick={handlePublish}
-              disabled={!activePost || isPublishing}
+              disabled={isPublishing}
               className="flex items-center gap-2 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-md text-sm font-medium transition-colors shadow-sm shadow-indigo-600/20 disabled:opacity-50 cursor-pointer"
             >
               {isPublishing ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
