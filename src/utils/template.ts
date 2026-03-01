@@ -216,12 +216,14 @@ export function generateBlogHTML({ title, htmlContent, date, authorName, isIndex
       margin: 0;
       font-size: 1.5rem;
       font-weight: 700;
-      color: var(--link-hover);
+      color: var(--text);
       line-height: 1.3;
       letter-spacing: -0.02em;
+      transition: color 0.2s ease;
       text-decoration: none;
     }
     .index-link:hover .index-title {
+      color: var(--link-hover);
       text-decoration: underline;
       text-underline-offset: 4px;
     }
