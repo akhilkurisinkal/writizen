@@ -252,7 +252,7 @@ export function generateBlogHTML({ title, htmlContent, date, authorName, authorA
 <body>
   <header>
     <a href="${isIndex ? '#' : '../index.html'}" class="header-logo">
-      ${authorName ? authorName : 'My Blog'}
+      ${authorName ? authorName + ' Blog' : 'My Blog'}
     </a>
     <div class="header-nav">
       <a href="#" class="nav-link">About</a>
