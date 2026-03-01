@@ -7,8 +7,7 @@ import { parseFrontmatter, slugify } from './markdown';
 export async function buildStaticSite(
   vaultPath: string,
   customDomain?: string,
-  authorName?: string,
-  authorAvatar?: string
+  authorName?: string
 ): Promise<string> {
   try {
     const { remove } = await import('@tauri-apps/plugin-fs');
@@ -68,8 +67,7 @@ export async function buildStaticSite(
         title,
         htmlContent,
         date,
-        authorName,
-        authorAvatar
+        authorName
       });
 
       // Write to out/posts folder

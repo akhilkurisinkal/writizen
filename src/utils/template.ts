@@ -3,11 +3,10 @@ interface BlogHTMLOptions {
   htmlContent: string;
   date?: string;
   authorName?: string;
-  authorAvatar?: string;
   isIndex?: boolean;
 }
 
-export function generateBlogHTML({ title, htmlContent, date, authorName, authorAvatar, isIndex = false }: BlogHTMLOptions): string {
+export function generateBlogHTML({ title, htmlContent, date, authorName, isIndex = false }: BlogHTMLOptions): string {
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -126,23 +125,8 @@ export function generateBlogHTML({ title, htmlContent, date, authorName, authorA
       gap: 12px;
       color: var(--light-text);
       font-size: 0.9rem;
-    }
-    .post-avatar {
-      width: 32px;
-      height: 32px;
-      border-radius: 50%;
-      object-fit: cover;
-      box-shadow: 0 0 0 1px var(--border);
-    }
-    .post-author-info {
-      display: flex;
-      flex-direction: column;
-      align-items: flex-start;
-      line-height: 1.4;
-    }
-    .post-author-name {
-      font-weight: 600;
-      color: var(--text);
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
     }
 
     /* Article Body */
@@ -279,15 +263,9 @@ export function generateBlogHTML({ title, htmlContent, date, authorName, authorA
           Back to posts
         </a>
         <h1 class="post-title">${title}</h1>
-        ${(date || authorName) ? `
-          <div class="post-meta">
-            ${authorAvatar ? `<img src="${authorAvatar}" alt="${authorName || 'Author'}" class="post-avatar" />` : ''}
-            <div class="post-author-info">
-              ${authorName ? `<span class="post-author-name">${authorName}</span>` : ''}
-              ${date ? `<time datetime="${new Date(date).toISOString()}">${date}</time>` : ''}
-            </div>
-          </div>
-        ` : ''}
+        ${date ? `<div class="post-meta">
+          <time datetime="${new Date(date).toISOString()}">${date}</time>
+        </div>` : ''}
       </div>
     ` : ''}
     <article>
