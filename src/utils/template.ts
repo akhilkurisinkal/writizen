@@ -215,6 +215,10 @@ export function generateBlogHTML({ title, htmlContent, date, authorName, authorA
       display: inline-block;
       margin-bottom: 0.5rem;
       text-decoration: none;
+      border-bottom: none !important;
+    }
+    .index-link:hover {
+      border-bottom: none !important;
     }
     .index-title {
       margin: 0;
