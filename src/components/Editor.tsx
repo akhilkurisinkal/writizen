@@ -453,8 +453,8 @@ export const EditorWrapper = ({ content, postPath, vaultPath, homeDir, onChange 
             <MetadataHeader meta={meta} onMetaChange={handleMetaChange} />
             <Toolbar editor={editor} onInsertImage={handleInsertImage} />
 
-            <div className="flex-1 min-h-0 overflow-y-auto bg-slate-100 dark:bg-slate-950">
-                <div className="max-w-[794px] mx-auto my-8 bg-white dark:bg-slate-900 shadow-md rounded-sm px-16 py-14 min-h-[1123px] border border-slate-200/50 dark:border-slate-800">
+            <div className="flex-1 min-h-0 overflow-y-auto bg-white dark:bg-slate-900">
+                <div className="max-w-3xl mx-auto px-8 py-12 lg:px-12 lg:py-16 min-h-full">
                     <EditorContent editor={editor} className="writizen-editor" />
                 </div>
             </div>
