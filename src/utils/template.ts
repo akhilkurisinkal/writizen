@@ -48,7 +48,7 @@ export function generateBlogHTML({ title, htmlContent, date, authorName, authorA
       -moz-osx-font-smoothing: grayscale;
     }
     a { color: var(--link); text-decoration: none; transition: color 0.2s ease; }
-    a:hover { color: var(--link-hover); }
+    a:hover { color: var(--link-hover); text-decoration: none; }
 
     /* Header styling */
     header {
