@@ -95,7 +95,7 @@ export function generateBlogHTML({ title, htmlContent, date, authorName, isIndex
     /* Post Header */
     .post-header {
       margin-bottom: 3.5rem;
-      text-align: center;
+      text-align: left;
     }
     .back-link {
       display: inline-flex;
@@ -113,7 +113,7 @@ export function generateBlogHTML({ title, htmlContent, date, authorName, isIndex
     .post-title {
       font-size: 2.5rem;
       font-weight: 800;
-      margin: 0 0 1.5rem 0;
+      margin: 0 0 0.5rem 0;
       line-height: 1.15;
       letter-spacing: -0.03em;
       color: var(--text);
@@ -121,12 +121,14 @@ export function generateBlogHTML({ title, htmlContent, date, authorName, isIndex
     .post-meta {
       display: flex;
       align-items: center;
-      justify-content: center;
+      justify-content: flex-start;
       gap: 12px;
       color: var(--light-text);
       font-size: 0.9rem;
       letter-spacing: 0.05em;
       text-transform: uppercase;
+      padding-bottom: 2.5rem;
+      border-bottom: 1px solid var(--border);
     }
 
     /* Article Body */
