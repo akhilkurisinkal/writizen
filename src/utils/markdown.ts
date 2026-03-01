@@ -3,6 +3,8 @@ export interface PostMeta {
     date: string;
     slug: string;
     status: "draft" | "ready";
+    excerpt?: string;
+    description?: string;
 }
 
 export function parseFrontmatter(raw: string): { meta: PostMeta; body: string } {

@@ -35,7 +35,7 @@ export async function buildStaticSite(
     const entries = await readDir(postsDir);
     const mdFiles = entries.filter(e => e.isFile && e.name && e.name.endsWith('.md'));
 
-    const postLinks: { title: string, date: string, slug: string }[] = [];
+    const postLinks: { title: string, date: string, slug: string, excerpt: string }[] = [];
 
     // 3. Process each post
     for (const file of mdFiles) {
@@ -54,10 +54,14 @@ export async function buildStaticSite(
       }
 
       const title = meta.title || file.name.replace('.md', '');
-      const date = meta.date || new Date().toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
+      const date = meta.date || new Date().toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
 
       // Convert Markdown to HTML
       const htmlContent = await marked.parse(body);
+
+      // Generate text excerpt for Index Page 
+      const plainText = htmlContent.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
+      const excerpt = meta.excerpt || meta.description || (plainText.length > 180 ? plainText.substring(0, 180) + '...' : plainText);
 
       // Generate full HTML page
       const fullHtml = generateBlogHTML({
@@ -78,7 +82,8 @@ export async function buildStaticSite(
       postLinks.push({
         title,
         date,
-        slug: `posts/${slug}`
+        slug: `posts/${slug}`,
+        excerpt
       });
     }
 
