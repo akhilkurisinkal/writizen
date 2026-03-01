@@ -227,12 +227,11 @@ export function generateBlogHTML({ title, htmlContent, date, authorName, authorA
       color: var(--link-hover);
       line-height: 1.3;
       letter-spacing: -0.02em;
-      transition: opacity 0.2s ease;
       text-decoration: none;
     }
     .index-link:hover .index-title {
-      opacity: 0.8;
-      text-decoration: none;
+      text-decoration: underline;
+      text-underline-offset: 4px;
     }
     .index-excerpt {
       margin: 0;
