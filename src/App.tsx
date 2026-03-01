@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
-import { FileText, FolderClosed, FolderOpen, Plus, Sun, Moon, Send, Loader2, ChevronRight, FolderPlus, LogOut, Settings, Trash2, Edit2 } from "lucide-react";
+import { FileText, FolderClosed, FolderOpen, Plus, Sun, Moon, Send, Loader2, ChevronRight, FolderPlus, LogOut, Settings, Trash2, Edit2, Server } from "lucide-react";
 import clsx from "clsx";
 import { open } from "@tauri-apps/plugin-dialog";
 import { homeDir } from "@tauri-apps/api/path";
 import Editor from "./components/Editor";
 import PublishSettingsDialog from "./components/PublishSettingsDialog";
 import { useVault, Post, VaultNode } from "./hooks/useVault";
+import { SettingsModal } from "./components/SettingsModal";
 import "./App.css";
 
 // ─── Storage helpers ──────────────────────────────────────────────────────────
@@ -320,6 +321,7 @@ function App() {
   const [isLoadingFile, setIsLoadingFile] = useState(false);
   const [isPublishSettingsOpen, setIsPublishSettingsOpen] = useState(false);
   const [isPublishConfirmOpen, setIsPublishConfirmOpen] = useState(false);
+  const [isSiteSettingsOpen, setIsSiteSettingsOpen] = useState(false);
   const [publishSuccess, setPublishSuccess] = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
   const [expandedPaths, setExpandedPaths] = useState<Set<string>>(new Set());
@@ -640,11 +642,19 @@ function App() {
             </button>
 
             <button
+              onClick={() => setIsSiteSettingsOpen(true)}
+              className="p-1.5 rounded-md hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 transition-colors cursor-pointer"
+              title="Site Settings"
+            >
+              <Settings size={16} />
+            </button>
+
+            <button
               onClick={() => setIsPublishSettingsOpen(true)}
               className="p-1.5 rounded-md hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 transition-colors cursor-pointer"
               title="Publish Settings"
             >
-              <Settings size={16} />
+              <Server size={16} />
             </button>
 
 
@@ -725,6 +735,14 @@ function App() {
           isOpen={isPublishConfirmOpen}
           onClose={() => setIsPublishConfirmOpen(false)}
           onConfirm={executePublish}
+        />
+      )}
+
+      {isSiteSettingsOpen && (
+        <SettingsModal
+          isOpen={isSiteSettingsOpen}
+          onClose={() => setIsSiteSettingsOpen(false)}
+          vaultPath={vaultPath}
         />
       )}
 
