@@ -177,74 +177,78 @@ function Toolbar({ editor, onInsertImage }: { editor: ReturnType<typeof useEdito
     };
 
     return (
-        <div className="relative">
-            <div className="flex items-center gap-0.5 flex-wrap px-3 py-2 border-b border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 sticky top-0 z-10">
-                {btn("Bold (⌘B)", <Bold size={15} />, editor.isActive("bold"), () =>
-                    editor.chain().focus().toggleBold().run()
-                )}
-                {btn("Italic (⌘I)", <Italic size={15} />, editor.isActive("italic"), () =>
-                    editor.chain().focus().toggleItalic().run()
-                )}
-                {btn("Strikethrough", <Strikethrough size={15} />, editor.isActive("strike"), () =>
-                    editor.chain().focus().toggleStrike().run()
-                )}
+        <div className="relative z-10 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700">
+            <div className="px-8 lg:px-12 max-w-3xl mx-auto w-full">
+                <div className="flex items-center gap-0.5 flex-wrap py-2 -ml-1.5">
+                    {btn("Bold (⌘B)", <Bold size={15} />, editor.isActive("bold"), () =>
+                        editor.chain().focus().toggleBold().run()
+                    )}
+                    {btn("Italic (⌘I)", <Italic size={15} />, editor.isActive("italic"), () =>
+                        editor.chain().focus().toggleItalic().run()
+                    )}
+                    {btn("Strikethrough", <Strikethrough size={15} />, editor.isActive("strike"), () =>
+                        editor.chain().focus().toggleStrike().run()
+                    )}
 
-                <Divider />
+                    <Divider />
 
-                {btn("Heading 1", <Heading1 size={15} />, editor.isActive("heading", { level: 1 }), () =>
-                    editor.chain().focus().toggleHeading({ level: 1 }).run()
-                )}
-                {btn("Heading 2", <Heading2 size={15} />, editor.isActive("heading", { level: 2 }), () =>
-                    editor.chain().focus().toggleHeading({ level: 2 }).run()
-                )}
+                    {btn("Heading 1", <Heading1 size={15} />, editor.isActive("heading", { level: 1 }), () =>
+                        editor.chain().focus().toggleHeading({ level: 1 }).run()
+                    )}
+                    {btn("Heading 2", <Heading2 size={15} />, editor.isActive("heading", { level: 2 }), () =>
+                        editor.chain().focus().toggleHeading({ level: 2 }).run()
+                    )}
 
-                <Divider />
+                    <Divider />
 
-                {btn("Bullet List", <List size={15} />, editor.isActive("bulletList"), () =>
-                    editor.chain().focus().toggleBulletList().run()
-                )}
-                {btn("Numbered List", <ListOrdered size={15} />, editor.isActive("orderedList"), () =>
-                    editor.chain().focus().toggleOrderedList().run()
-                )}
+                    {btn("Bullet List", <List size={15} />, editor.isActive("bulletList"), () =>
+                        editor.chain().focus().toggleBulletList().run()
+                    )}
+                    {btn("Numbered List", <ListOrdered size={15} />, editor.isActive("orderedList"), () =>
+                        editor.chain().focus().toggleOrderedList().run()
+                    )}
 
-                <Divider />
+                    <Divider />
 
-                {btn("Link", <LinkIcon size={15} />, editor.isActive("link") || showLinkInput, handleLinkClick)}
-                {btn("Insert Image", <ImageIcon size={15} />, false, onInsertImage)}
+                    {btn("Link", <LinkIcon size={15} />, editor.isActive("link") || showLinkInput, handleLinkClick)}
+                    {btn("Insert Image", <ImageIcon size={15} />, false, onInsertImage)}
 
-                <Divider />
+                    <Divider />
 
-                {btn("Undo", <Undo size={15} />, false, () => editor.chain().focus().undo().run())}
-                {btn("Redo", <Redo size={15} />, false, () => editor.chain().focus().redo().run())}
+                    {btn("Undo", <Undo size={15} />, false, () => editor.chain().focus().undo().run())}
+                    {btn("Redo", <Redo size={15} />, false, () => editor.chain().focus().redo().run())}
+                </div>
             </div>
 
             {/* Inline link URL input */}
             {showLinkInput && (
-                <div className="absolute left-0 right-0 top-full z-20 px-3 py-2 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 flex items-center gap-2 shadow-sm">
-                    <input
-                        ref={linkInputRef}
-                        type="url"
-                        placeholder="Paste or type a URL…"
-                        value={linkUrl}
-                        onChange={(e) => setLinkUrl(e.target.value)}
-                        onKeyDown={(e) => {
-                            if (e.key === "Enter") { e.preventDefault(); handleLinkSubmit(); }
-                            if (e.key === "Escape") { setShowLinkInput(false); setLinkUrl(""); editor.chain().focus().run(); }
-                        }}
-                        className="flex-1 px-3 py-1.5 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md outline-none focus:ring-2 focus:ring-indigo-500/40 text-slate-800 dark:text-slate-200 placeholder:text-slate-400"
-                    />
-                    <button
-                        onClick={handleLinkSubmit}
-                        className="px-3 py-1.5 text-sm font-medium bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors"
-                    >
-                        Apply
-                    </button>
-                    <button
-                        onClick={() => { setShowLinkInput(false); setLinkUrl(""); editor.chain().focus().run(); }}
-                        className="px-2 py-1.5 text-sm text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
-                    >
-                        ✕
-                    </button>
+                <div className="absolute left-0 right-0 top-full z-20 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 shadow-sm">
+                    <div className="flex items-center gap-2 px-8 py-2 lg:px-12 max-w-3xl mx-auto w-full">
+                        <input
+                            ref={linkInputRef}
+                            type="url"
+                            placeholder="Paste or type a URL…"
+                            value={linkUrl}
+                            onChange={(e) => setLinkUrl(e.target.value)}
+                            onKeyDown={(e) => {
+                                if (e.key === "Enter") { e.preventDefault(); handleLinkSubmit(); }
+                                if (e.key === "Escape") { setShowLinkInput(false); setLinkUrl(""); editor.chain().focus().run(); }
+                            }}
+                            className="flex-1 px-3 py-1.5 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md outline-none focus:ring-2 focus:ring-indigo-500/40 text-slate-800 dark:text-slate-200 placeholder:text-slate-400"
+                        />
+                        <button
+                            onClick={handleLinkSubmit}
+                            className="px-3 py-1.5 text-sm font-medium bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors"
+                        >
+                            Apply
+                        </button>
+                        <button
+                            onClick={() => { setShowLinkInput(false); setLinkUrl(""); editor.chain().focus().run(); }}
+                            className="px-2 py-1.5 text-sm text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
+                        >
+                            ✕
+                        </button>
+                    </div>
                 </div>
             )}
         </div>
@@ -271,39 +275,41 @@ function MetadataHeader({
     };
 
     return (
-        <div className="flex items-center gap-4 px-4 py-2.5 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700">
-            {/* Title */}
-            <input
-                type="text"
-                value={meta.title}
-                onChange={(e) => updateField("title", e.target.value)}
-                placeholder="Post title…"
-                className="flex-1 text-xl font-semibold bg-transparent border-none outline-none text-slate-900 dark:text-white placeholder:text-slate-300 dark:placeholder:text-slate-600"
-            />
+        <div className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700">
+            <div className="flex items-center gap-4 px-8 py-4 lg:px-12 max-w-3xl mx-auto w-full">
+                {/* Title */}
+                <input
+                    type="text"
+                    value={meta.title}
+                    onChange={(e) => updateField("title", e.target.value)}
+                    placeholder="Post title…"
+                    className="flex-1 text-xl font-semibold bg-transparent border-none outline-none text-slate-900 dark:text-white placeholder:text-slate-300 dark:placeholder:text-slate-600"
+                />
 
-            {/* Status toggle */}
-            <div className="flex items-center gap-2 shrink-0">
-                <span className={`text-xs font-medium transition-colors ${meta.status === "ready" ? "text-emerald-600 dark:text-emerald-400" : "text-slate-400 dark:text-slate-500"
-                    }`}>
-                    {meta.status === "ready" ? "Ready to Publish" : "Draft"}
-                </span>
-                <button
-                    onClick={() =>
-                        onMetaChange({
-                            ...meta,
-                            status: meta.status === "draft" ? "ready" : "draft",
-                        })
-                    }
-                    className={`relative w-9 h-5 rounded-full transition-colors duration-200 ${meta.status === "ready"
-                        ? "bg-emerald-500"
-                        : "bg-slate-300 dark:bg-slate-600"
-                        }`}
-                >
-                    <span
-                        className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow-sm transition-transform duration-200 ${meta.status === "ready" ? "translate-x-4" : "translate-x-0"
+                {/* Status toggle */}
+                <div className="flex items-center gap-2 shrink-0">
+                    <span className={`text-xs font-medium transition-colors ${meta.status === "ready" ? "text-emerald-600 dark:text-emerald-400" : "text-slate-400 dark:text-slate-500"
+                        }`}>
+                        {meta.status === "ready" ? "Ready to Publish" : "Draft"}
+                    </span>
+                    <button
+                        onClick={() =>
+                            onMetaChange({
+                                ...meta,
+                                status: meta.status === "draft" ? "ready" : "draft",
+                            })
+                        }
+                        className={`relative w-9 h-5 rounded-full transition-colors duration-200 ${meta.status === "ready"
+                            ? "bg-emerald-500"
+                            : "bg-slate-300 dark:bg-slate-600"
                             }`}
-                    />
-                </button>
+                    >
+                        <span
+                            className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow-sm transition-transform duration-200 ${meta.status === "ready" ? "translate-x-4" : "translate-x-0"
+                                }`}
+                        />
+                    </button>
+                </div>
             </div>
         </div>
     );
