@@ -71,9 +71,9 @@ function TreeNode({
             )}
           />
           {isExpanded ? (
-            <FolderOpen size={14} className="shrink-0 text-amber-500" />
+            <FolderOpen size={14} className="shrink-0 text-indigo-500" />
           ) : (
-            <FolderClosed size={14} className="shrink-0 text-amber-500/70" />
+            <FolderClosed size={14} className="shrink-0 text-indigo-500/70" />
           )}
           <span className={clsx("truncate", isRoot ? "font-semibold" : "font-normal")}>
             {node.name}
