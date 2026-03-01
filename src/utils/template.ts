@@ -236,12 +236,14 @@ export function generateBlogHTML({ title, htmlContent, date, authorName, authorA
 <body>
   <header>
     <div class="header-container">
-      <a href="${isIndex ? '#' : '../index.html'}" class="header-logo">
-        <div class="rss-icon">
+      <div style="display: flex; align-items: center;">
+        <a href="${isIndex ? 'rss.xml' : '../rss.xml'}" class="rss-icon" title="RSS Feed">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11a9 9 0 0 1 9 9"/><path d="M4 4a16 16 0 0 1 16 16"/><circle cx="5" cy="19" r="1"/></svg>
-        </div>
-        ${authorName ? authorName + ' blog' : 'My Blog'}
-      </a>
+        </a>
+        <a href="${isIndex ? '#' : '../index.html'}" class="header-logo">
+          ${authorName ? authorName + ' blog' : 'My Blog'}
+        </a>
+      </div>
       <a href="#" class="header-about">About</a>
     </div>
   </header>

@@ -92,6 +92,34 @@ export async function buildStaticSite(
     const indexPath = await join(outDir, 'index.html');
     await writeTextFile(indexPath, indexHtml);
 
+    // 4.1. Generate RSS Feed
+    const blogTitle = authorName ? `${authorName} blog` : 'My Blog';
+    const fallBackDomain = 'https://writizen-demo.github.io';
+    const baseUrl = customDomain ? `https://${customDomain.trim()}` : fallBackDomain;
+
+    const rssItems = postLinks.map(post => `
+    <item>
+      <title><![CDATA[${post.title}]]></title>
+      <link>${baseUrl}/${post.slug}</link>
+      <guid>${baseUrl}/${post.slug}</guid>
+      <pubDate>${new Date(post.date).toUTCString()}</pubDate>
+      <description><![CDATA[${post.excerpt}]]></description>
+    </item>`).join('');
+
+    const rssXml = `<?xml version="1.0" encoding="UTF-8" ?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title><![CDATA[${blogTitle}]]></title>
+    <link>${baseUrl}</link>
+    <description><![CDATA[Latest posts from ${blogTitle}]]></description>
+    <atom:link href="${baseUrl}/rss.xml" rel="self" type="application/rss+xml" />
+${rssItems}
+  </channel>
+</rss>`;
+
+    const rssPath = await join(outDir, 'rss.xml');
+    await writeTextFile(rssPath, rssXml);
+
     // 4.5. Generate GitHub Actions Deploy Workflow
     // This completely automates GitHub Pages without the user touching settings
     const githubWorkflowsDir = await join(outDir, '.github', 'workflows');
@@ -100,41 +128,41 @@ export async function buildStaticSite(
     }
 
     const deployYml = `
-name: Deploy static content to Pages
+    name: Deploy static content to Pages
 
-on:
-  push:
+    on:
+    push:
     branches: ["main"]
-  workflow_dispatch:
+    workflow_dispatch:
 
-permissions:
-  contents: read
-  pages: write
-  id-token: write
+    permissions:
+    contents: read
+    pages: write
+    id - token: write
 
-concurrency:
-  group: "pages"
-  cancel-in-progress: false
+    concurrency:
+    group: "pages"
+    cancel -in -progress: false
 
-jobs:
-  deploy:
+    jobs:
+    deploy:
     environment:
-      name: github-pages
-      url: \${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-latest
+    name: github - pages
+    url: \${ { steps.deployment.outputs.page_url } }
+    runs - on: ubuntu - latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Setup Pages
-        uses: actions/configure-pages@v5
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: '.'
+    - name: Checkout
+    uses: actions / checkout@v4
+    - name: Setup Pages
+    uses: actions / configure - pages@v5
+    - name: Upload artifact
+    uses: actions / upload - pages - artifact@v3
+    with:
+    path: '.'
       - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
-`;
+    id: deployment
+    uses: actions / deploy - pages@v4
+      `;
     const deployYmlPath = await join(githubWorkflowsDir, 'deploy.yml');
     await writeTextFile(deployYmlPath, deployYml.trim());
 
