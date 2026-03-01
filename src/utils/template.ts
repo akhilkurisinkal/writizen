@@ -15,123 +15,130 @@ export function generateBlogHTML({ title, htmlContent, date, authorName, authorA
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>${title}</title>
   <style>
-    /* Karpathy-style Minimal Theme */
+    /* Modern Minimal Theme */
     :root {
-      --bg: #ffffff;
-      --text: #333333;
-      --light-text: #888888;
-      --border: #f0f0f0;
-      --link: #3b82f6; /* Karpathy blue */
-      --link-hover: #2563eb;
+      --bg: #fafafa;
+      --text: #1a1a1a;
+      --light-text: #6b7280;
+      --border: #e5e7eb;
+      --link: #1a1a1a;
+      --link-hover: #4f46e5;
+      --surface: #ffffff;
     }
     @media (prefers-color-scheme: dark) {
       :root {
-        --bg: #121212;
-        --text: #e0e0e0;
-        --light-text: #999999;
-        --border: #333333;
-        --link: #60a5fa;
-        --link-hover: #93c5fd;
+        --bg: #09090b;
+        --text: #f3f4f6;
+        --light-text: #9ca3af;
+        --border: #27272a;
+        --link: #f3f4f6;
+        --link-hover: #818cf8;
+        --surface: #18181b;
       }
     }
     * { box-sizing: border-box; }
     body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
       background-color: var(--bg);
       color: var(--text);
-      line-height: 1.6;
+      line-height: 1.7;
       margin: 0;
       padding: 0;
       -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
     }
-    a { color: var(--link); text-decoration: none; }
-    a:hover { text-decoration: underline; color: var(--link-hover); }
+    a { color: var(--link); text-decoration: none; transition: color 0.2s ease; }
+    a:hover { color: var(--link-hover); }
 
     /* Header styling */
     header {
-      border-bottom: 1px solid var(--border);
-      padding: 1.5rem 1rem;
-    }
-    .header-container {
-      max-width: 800px;
+      padding: 2.5rem 1.5rem 1.5rem;
+      max-width: 680px;
       margin: 0 auto;
       display: flex;
       justify-content: space-between;
       align-items: center;
     }
     .header-logo {
+      font-size: 1.1rem;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+      color: var(--text);
+    }
+    .header-nav {
       display: flex;
       align-items: center;
-      text-decoration: none;
-      color: var(--text);
-      font-size: 1.5rem;
-      font-weight: 400;
-      letter-spacing: -0.02em;
+      gap: 1rem;
     }
-    .header-logo:hover {
-      text-decoration: none;
-      color: var(--text);
+    .nav-link {
+      font-size: 0.9rem;
+      color: var(--light-text);
+      font-weight: 500;
     }
+    .nav-link:hover { color: var(--text); }
     .rss-icon {
-      background-color: #f26522;
-      color: white;
-      border-radius: 4px;
-      width: 28px;
-      height: 28px;
-      padding: 4px;
-      margin-right: 12px;
+      color: var(--light-text);
       display: flex;
       align-items: center;
       justify-content: center;
+      transition: color 0.2s;
     }
-    .rss-icon svg { width: 100%; height: 100%; stroke-width: 2.5; }
-    .header-about {
-      color: var(--light-text);
-      font-size: 1rem;
-      text-decoration: none;
-    }
+    .rss-icon:hover { color: #f26522; }
+    .rss-icon svg { width: 18px; height: 18px; stroke-width: 2; }
 
     /* Main Content */
     main {
-      padding: 3rem 1rem;
-      max-width: 800px;
+      padding: 3rem 1.5rem 5rem;
+      max-width: 680px;
       margin: 0 auto;
     }
 
-    /* Post Header (Only on Post Pages) */
+    /* Post Header */
     .post-header {
-      margin-bottom: 3rem;
+      margin-bottom: 3.5rem;
+      text-align: center;
     }
     .back-link {
-      display: inline-block;
-      margin-bottom: 2rem;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      margin-bottom: 2.5rem;
       color: var(--light-text);
-      font-size: 0.9rem;
+      font-size: 0.85rem;
+      font-weight: 500;
+      transition: color 0.2s;
     }
+    .back-link:hover { color: var(--text); }
+    .back-link svg { width: 14px; height: 14px; }
+    
     .post-title {
       font-size: 2.5rem;
-      font-weight: 700;
-      margin: 0 0 1rem 0;
-      line-height: 1.2;
-      letter-spacing: -0.02em;
+      font-weight: 800;
+      margin: 0 0 1.5rem 0;
+      line-height: 1.15;
+      letter-spacing: -0.03em;
       color: var(--text);
     }
     .post-meta {
       display: flex;
       align-items: center;
+      justify-content: center;
       gap: 12px;
       color: var(--light-text);
-      font-size: 0.95rem;
+      font-size: 0.9rem;
     }
     .post-avatar {
-      width: 40px;
-      height: 40px;
+      width: 32px;
+      height: 32px;
       border-radius: 50%;
       object-fit: cover;
+      box-shadow: 0 0 0 1px var(--border);
     }
     .post-author-info {
       display: flex;
       flex-direction: column;
+      align-items: flex-start;
+      line-height: 1.4;
     }
     .post-author-name {
       font-weight: 600;
@@ -139,66 +146,70 @@ export function generateBlogHTML({ title, htmlContent, date, authorName, authorA
     }
 
     /* Article Body */
+    article {
+      font-size: 1.05rem;
+    }
     article img {
       max-width: 100%;
       height: auto;
-      border-radius: 6px;
-      margin: 2rem 0;
+      border-radius: 8px;
+      margin: 2.5rem 0;
     }
     article h1, article h2, article h3 {
-      font-weight: 600;
-      margin-top: 2.5rem;
+      font-weight: 700;
+      margin-top: 3rem;
       margin-bottom: 1rem;
       line-height: 1.3;
+      letter-spacing: -0.02em;
       color: var(--text);
     }
-    article p { margin-top: 1.2rem; margin-bottom: 1.2rem; }
-    article ul, article ol { padding-left: 1.5rem; margin-top: 1rem; margin-bottom: 1rem; }
+    article h2 { font-size: 1.75rem; }
+    article h3 { font-size: 1.3rem; }
+    article p { margin-top: 1.5rem; margin-bottom: 1.5rem; }
+    article a { color: var(--link-hover); text-decoration: none; border-bottom: 1px solid transparent; }
+    article a:hover { border-bottom-color: var(--link-hover); }
+    article ul, article ol { padding-left: 1.5rem; margin-top: 1.5rem; margin-bottom: 1.5rem; }
     article li { margin-bottom: 0.5rem; }
     article pre {
-      background: #f8f9fa;
-      color: #333;
-      padding: 1rem;
-      border-radius: 6px;
+      background: var(--surface);
+      color: var(--text);
+      padding: 1.25rem;
+      border-radius: 8px;
       overflow-x: auto;
       font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
       font-size: 0.9rem;
-      border: 1px solid #e9ecef;
-      margin: 1.5rem 0;
-    }
-    @media (prefers-color-scheme: dark) {
-      article pre {
-        background: #1e1e1e;
-        color: #d4d4d4;
-        border-color: #333;
-      }
+      border: 1px solid var(--border);
+      margin: 2rem 0;
     }
     article code {
-      background: rgba(128,128,128,0.1);
+      background: var(--border);
       padding: 0.2em 0.4em;
-      border-radius: 3px;
+      border-radius: 4px;
       font-family: monospace;
-      font-size: 0.9em;
+      font-size: 0.85em;
     }
     article pre code { background: none; padding: 0; }
     article blockquote {
-      border-left: 4px solid var(--border);
-      padding-left: 1.2rem;
-      margin: 1.5rem 0;
+      border-left: 3px solid var(--border);
+      padding-left: 1.5rem;
+      margin: 2rem 0;
       color: var(--light-text);
       font-style: italic;
     }
 
-    /* Index List (Karpathy Style) */
-    .index-list { list-style: none; padding: 0; margin: 0; }
+    /* Index List */
+    .index-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 3rem; }
     .index-item {
-      margin-bottom: 3.5rem;
+      display: flex;
+      flex-direction: column;
     }
     .index-date {
       color: var(--light-text);
-      font-size: 0.95rem;
-      margin-bottom: 0.25rem;
-      display: block;
+      font-size: 0.85rem;
+      font-weight: 500;
+      margin-bottom: 0.5rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
     }
     .index-link {
       display: inline-block;
@@ -206,58 +217,62 @@ export function generateBlogHTML({ title, htmlContent, date, authorName, authorA
     }
     .index-title {
       margin: 0;
-      font-size: 1.4rem;
-      font-weight: 400;
-      color: var(--link);
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--text);
       line-height: 1.3;
+      letter-spacing: -0.02em;
+      transition: color 0.2s;
     }
     .index-link:hover .index-title {
-      text-decoration: underline;
       color: var(--link-hover);
     }
     .index-excerpt {
       margin: 0;
-      font-size: 1.05rem;
-      color: var(--text);
-      line-height: 1.5;
+      font-size: 1rem;
+      color: var(--light-text);
+      line-height: 1.6;
     }
 
     /* Footer */
     footer {
       text-align: center;
-      padding: 4rem 1rem 2rem;
+      padding: 3rem 1.5rem;
       color: var(--light-text);
       font-size: 0.85rem;
-      max-width: 800px;
+      border-top: 1px solid var(--border);
+      max-width: 680px;
       margin: 0 auto;
     }
   </style>
 </head>
 <body>
   <header>
-    <div class="header-container">
-      <div style="display: flex; align-items: center;">
-        <a href="${isIndex ? 'rss.xml' : '../rss.xml'}" class="rss-icon" title="RSS Feed">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11a9 9 0 0 1 9 9"/><path d="M4 4a16 16 0 0 1 16 16"/><circle cx="5" cy="19" r="1"/></svg>
-        </a>
-        <a href="${isIndex ? '#' : '../index.html'}" class="header-logo">
-          ${authorName ? authorName + ' blog' : 'My Blog'}
-        </a>
-      </div>
-      <a href="#" class="header-about">About</a>
+    <a href="${isIndex ? '#' : '../index.html'}" class="header-logo">
+      ${authorName ? authorName : 'My Blog'}
+    </a>
+    <div class="header-nav">
+      <a href="#" class="nav-link">About</a>
+      <a href="${isIndex ? 'rss.xml' : '../rss.xml'}" class="rss-icon" aria-label="RSS Feed" title="RSS Feed">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11a9 9 0 0 1 9 9"/><path d="M4 4a16 16 0 0 1 16 16"/><circle cx="5" cy="19" r="1"/></svg>
+      </a>
     </div>
   </header>
+  
   <main>
     ${!isIndex ? `
       <div class="post-header">
-        <a href="../index.html" class="back-link">← Back to home</a>
+        <a href="../index.html" class="back-link">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+          Back to posts
+        </a>
         <h1 class="post-title">${title}</h1>
         ${(date || authorName) ? `
           <div class="post-meta">
             ${authorAvatar ? `<img src="${authorAvatar}" alt="${authorName || 'Author'}" class="post-avatar" />` : ''}
             <div class="post-author-info">
               ${authorName ? `<span class="post-author-name">${authorName}</span>` : ''}
-              ${date ? `<time datetime="${new Date(date).toISOString()}">Published on ${date}</time>` : ''}
+              ${date ? `<time datetime="${new Date(date).toISOString()}">${date}</time>` : ''}
             </div>
           </div>
         ` : ''}
@@ -267,6 +282,7 @@ export function generateBlogHTML({ title, htmlContent, date, authorName, authorA
       ${htmlContent}
     </article>
   </main>
+
   <footer>
     <p>Powered by <a href="https://github.com/writizen">Writizen</a></p>
   </footer>
@@ -293,6 +309,6 @@ export function generateIndexHTML(postLinks: { title: string, date: string, slug
         </ul>
       `,
     isIndex: true,
-    authorName: "" // Default fallback, but buildSite passes it during compilation
+    authorName: ""
   });
 }
