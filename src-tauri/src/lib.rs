@@ -18,7 +18,7 @@ fn git_status(path: String) -> Result<bool, String> {
 }
 
 #[tauri::command]
-fn git_commit_and_push(path: String, repo_url: String, pat: String, author_name: String, author_email: String) -> Result<String, String> {
+fn git_commit_and_push(path: String, repo_url: String, pat: String, author_name: String, author_email: String, force: bool) -> Result<String, String> {
     let repo = match Repository::open(&path) {
         Ok(r) => r,
         Err(_) => {
@@ -98,8 +98,12 @@ fn git_commit_and_push(path: String, repo_url: String, pat: String, author_name:
         Ok(head) => head.name().unwrap_or("refs/heads/main").to_string(),
         Err(_) => "refs/heads/main".to_string(),
     };
-    // Push without force by default to avoid rewriting remote history unexpectedly.
-    let refspec = format!("{}:{}", branch_name, branch_name);
+    // Include '+' prefix for force push if requested
+    let refspec = if force {
+        format!("+{}:{}", branch_name, branch_name)
+    } else {
+        format!("{}:{}", branch_name, branch_name)
+    };
     
     remote.push(&[&refspec], Some(&mut push_opts)).map_err(|e| e.message().to_string())?;
     
