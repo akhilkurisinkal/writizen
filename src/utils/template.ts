@@ -214,6 +214,7 @@ export function generateBlogHTML({ title, htmlContent, date, authorName, authorA
     .index-link {
       display: inline-block;
       margin-bottom: 0.5rem;
+      text-decoration: none;
     }
     .index-title {
       margin: 0;
@@ -223,9 +224,11 @@ export function generateBlogHTML({ title, htmlContent, date, authorName, authorA
       line-height: 1.3;
       letter-spacing: -0.02em;
       transition: color 0.2s;
+      text-decoration: none;
     }
     .index-link:hover .index-title {
       color: var(--link-hover);
+      text-decoration: none;
     }
     .index-excerpt {
       margin: 0;
