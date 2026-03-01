@@ -178,7 +178,7 @@ function Toolbar({ editor, onInsertImage }: { editor: ReturnType<typeof useEdito
 
     return (
         <div className="relative z-10 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700">
-            <div className="px-8 lg:px-12 max-w-3xl mx-auto w-full">
+            <div className="px-8 lg:px-12 max-w-4xl mx-auto w-full">
                 <div className="flex items-center gap-0.5 flex-wrap py-2 -ml-1.5">
                     {btn("Bold (⌘B)", <Bold size={15} />, editor.isActive("bold"), () =>
                         editor.chain().focus().toggleBold().run()
@@ -223,7 +223,7 @@ function Toolbar({ editor, onInsertImage }: { editor: ReturnType<typeof useEdito
             {/* Inline link URL input */}
             {showLinkInput && (
                 <div className="absolute left-0 right-0 top-full z-20 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 shadow-sm">
-                    <div className="flex items-center gap-2 px-8 py-2 lg:px-12 max-w-3xl mx-auto w-full">
+                    <div className="flex items-center gap-2 px-8 py-2 lg:px-12 max-w-4xl mx-auto w-full">
                         <input
                             ref={linkInputRef}
                             type="url"
@@ -276,7 +276,7 @@ function MetadataHeader({
 
     return (
         <div className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700">
-            <div className="flex items-center gap-4 px-8 py-4 lg:px-12 max-w-3xl mx-auto w-full">
+            <div className="flex items-center gap-4 px-8 py-4 lg:px-12 max-w-4xl mx-auto w-full">
                 {/* Title */}
                 <input
                     type="text"
@@ -460,7 +460,7 @@ export const EditorWrapper = ({ content, postPath, vaultPath, homeDir, onChange 
             <Toolbar editor={editor} onInsertImage={handleInsertImage} />
 
             <div className="flex-1 min-h-0 overflow-y-auto bg-white dark:bg-slate-900">
-                <div className="max-w-3xl mx-auto px-8 py-12 lg:px-12 lg:py-16 min-h-full">
+                <div className="max-w-4xl mx-auto px-8 py-12 lg:px-12 lg:py-16 min-h-full">
                     <EditorContent editor={editor} className="writizen-editor" />
                 </div>
             </div>
