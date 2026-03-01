@@ -8,7 +8,7 @@ export async function buildStaticSite(vaultPath: string, customDomain?: string):
   try {
     const { remove } = await import('@tauri-apps/plugin-fs');
     const postsDir = await join(vaultPath, 'posts');
-    const outDir = await join(vaultPath, 'out');
+    const outDir = await join(vaultPath, 'public_html');
     const assetsDir = await join(vaultPath, 'assets');
     const outAssetsDir = await join(outDir, 'assets');
 

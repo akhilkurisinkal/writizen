@@ -498,10 +498,10 @@ function App() {
       const { buildStaticSite } = await import('./utils/buildSite');
       await buildStaticSite(absoluteVaultPath, customDomain);
 
-      // 3. Resolve absolute path of the 'out' directory
-      const absoluteOutPath = `${absoluteVaultPath}/out`;
+      // 3. Resolve absolute path of the 'public_html' directory
+      const absoluteOutPath = `${absoluteVaultPath}/public_html`;
 
-      // 4. Push *only* the 'out' directory to GitHub
+      // 4. Push *only* the 'public_html' directory to GitHub
       const { invoke } = await import('@tauri-apps/api/core');
       await invoke('git_commit_and_push', {
         path: absoluteOutPath,
